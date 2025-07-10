@@ -1,0 +1,18 @@
+$ npm i -g @nestjs/cli
+$ nest new project-name
+
+To create module under module folder use 
+--> nest g module modules/users 
+
+
+To create controller under controllers folder use
+--> nest g controller controllers/users
+CREATE src/controllers/users/users.controller.spec.ts (485 bytes)
+CREATE src/controllers/users/users.controller.ts (99 bytes)
+UPDATE src/app.module.ts (409 bytes)
+
+To create service/provider under services folder use
+--> nest g service services/users      
+CREATE src/services/users/users.service.spec.ts (453 bytes)
+CREATE src/services/users/users.service.ts (89 bytes)
+UPDATE src/app.module.ts (486 bytes)
