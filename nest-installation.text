@@ -16,3 +16,27 @@ To create service/provider under services folder use
 CREATE src/services/users/users.service.spec.ts (453 bytes)
 CREATE src/services/users/users.service.ts (89 bytes)
 UPDATE src/app.module.ts (486 bytes)
+
+--> In NestJS, you can create a module, controller, and service in a single command using the Nest CLI by appending multiple flags. Here's the command:
+➜  userDirectory git:(master) ✗ nest g resource demo 
+✔ What transport layer do you use? REST API
+✔ Would you like to generate CRUD entry points? Yes
+CREATE src/demo/demo.controller.spec.ts (556 bytes)
+CREATE src/demo/demo.controller.ts (883 bytes)
+CREATE src/demo/demo.module.ts (241 bytes)
+CREATE src/demo/demo.service.spec.ts (446 bytes)
+CREATE src/demo/demo.service.ts (607 bytes)
+CREATE src/demo/dto/create-demo.dto.ts (30 bytes)
+CREATE src/demo/dto/update-demo.dto.ts (169 bytes)
+CREATE src/demo/entities/demo.entity.ts (21 bytes)
+UPDATE src/app.module.ts (442 bytes)
+
+--> If you only want to generate the module, controller, and service without full CRUD or resource boilerplate, use:
+nest g mo users && nest g co users --no-spec && nest g s users --no-spec
+This command chains the three basic generators:
+
+mo for module
+
+co for controller
+
+s for service
