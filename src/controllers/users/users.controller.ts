@@ -7,8 +7,12 @@ import {
   Patch,
   Post,
   Query,
+  ParseIntPipe,
+  ValidationPipe,
 } from '@nestjs/common';
 import { UsersService } from 'src/services/users/users.service';
+import { CreateUserDto } from 'src/dto/create-user.dto';
+import { UpdateUserDto } from 'src/dto/update-user.dto';
 
 @Controller('users') // route /users known as decorator it is predefined function here
 export class UsersController {
@@ -20,38 +24,28 @@ export class UsersController {
     return this.userService.findAll(role);
   }
   @Get(':id') // GET /users/:id
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.userService.findOne(id);
   }
 
   @Post() // POST /users
   create(
-    @Body()
-    user: {
-      name: string;
-      email: string;
-      age: number;
-      role: 'INTERN' | 'ENGINEER' | 'ADMIN';
-    },
+    @Body(ValidationPipe)
+    createUserDto: CreateUserDto,
   ) {
-    return this.userService.create(user);
+    return this.userService.create(createUserDto);
   }
   @Patch(':id') // PATCH /users/:id
   update(
-    @Param('id') id: string,
-    @Body()
-    userUpdate: {
-      name?: string;
-      email?: string;
-      age?: number;
-      role?: 'INTERN' | 'ENGINEER' | 'ADMIN';
-    },
+    @Param('id', ParseIntPipe) id: number,
+    @Body(ValidationPipe)
+    updateUserDto: UpdateUserDto,
   ) {
-    return this.userService.update(+id, userUpdate);
+    return this.userService.update(id, updateUserDto);
   }
 
   @Delete(':id') // DELETE /users/:id
-  delete(@Param('id') id: string) {
-    return this.userService.delete(+id);
+  delete(@Param('id', ParseIntPipe) id: number) {
+    return this.userService.delete(id);
   }
 }
