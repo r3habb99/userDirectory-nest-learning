@@ -1,0 +1,167 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum definitions
+enum UserRole {
+  ADMIN
+  STUDENT
+}
+
+enum CourseType {
+  BCA
+  MCA
+  BBA
+  MBA
+  BCOM
+  MCOM
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+// Admin model
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  phone     String?
+  role      UserRole @default(ADMIN)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  createdStudents Student[] @relation("AdminCreatedStudents")
+  attendanceRecords AttendanceRecord[] @relation("AdminAttendanceRecords")
+
+  @@map("admins")
+}
+
+// Course model
+model Course {
+  id          String     @id @default(cuid())
+  name        String
+  type        CourseType
+  duration    Int        // Duration in years
+  description String?    @db.Text
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  students Student[]
+
+  @@unique([type])
+  @@map("courses")
+}
+
+// Student model
+model Student {
+  id               String     @id @default(cuid())
+  enrollmentNumber String     @unique
+  name             String
+  email            String?    @unique
+  phone            String
+  age              Int
+  gender           Gender
+  address          String     @db.Text
+  admissionYear    Int
+  passoutYear      Int
+  profilePhoto     String?    // URL to profile photo
+  isActive         Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  // Foreign Keys
+  courseId  String
+  createdBy String
+
+  // Relations
+  course            Course             @relation(fields: [courseId], references: [id])
+  admin             Admin              @relation("AdminCreatedStudents", fields: [createdBy], references: [id])
+  attendanceRecords AttendanceRecord[]
+  idCards           IdCard[]
+
+  @@index([enrollmentNumber])
+  @@index([courseId])
+  @@index([admissionYear])
+  @@map("students")
+}
+
+// Attendance Record model
+model AttendanceRecord {
+  id        String           @id @default(cuid())
+  date      DateTime         @db.Date
+  status    AttendanceStatus
+  remarks   String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Foreign Keys
+  studentId String
+  markedBy  String
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  admin   Admin   @relation("AdminAttendanceRecords", fields: [markedBy], references: [id])
+
+  @@unique([studentId, date])
+  @@index([date])
+  @@index([studentId])
+  @@map("attendance_records")
+}
+
+// ID Card model
+model IdCard {
+  id           String   @id @default(cuid())
+  cardNumber   String   @unique
+  issueDate    DateTime @default(now())
+  expiryDate   DateTime
+  qrCode       String   // QR code data
+  cardImageUrl String?  // URL to generated ID card image
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Foreign Keys
+  studentId String
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@map("id_cards")
+}
+
+// Enrollment Counter model for generating unique enrollment numbers
+model EnrollmentCounter {
+  id           String     @id @default(cuid())
+  courseType   CourseType @unique
+  year         Int
+  lastNumber   Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([courseType, year])
+  @@map("enrollment_counters")
+}

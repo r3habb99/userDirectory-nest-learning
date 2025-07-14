@@ -1,3 +1,6 @@
+// This file is deprecated and will be replaced by the new student service
+// Keeping for backward compatibility during migration
+
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from 'src/dto/create-user.dto';
 import { UpdateUserDto } from 'src/dto/update-user.dto';
