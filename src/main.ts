@@ -2,14 +2,22 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
+import {
+  API_CONFIG,
+  DOCS_CONFIG,
+  getBaseUrl,
+  getApiBaseUrl,
+} from './common/config/api.config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const logger = new Logger('Bootstrap');
 
   // Enable CORS for frontend integration
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    origin: process.env.FRONTEND_URL || API_CONFIG.DEFAULT_FRONTEND_URL,
     credentials: true,
   });
 
@@ -26,20 +34,30 @@ async function bootstrap() {
   );
 
   // Set global prefix for all routes
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix(API_CONFIG.PREFIX);
+
+  // Configure static file serving for uploads
+  const uploadsPath = join(process.cwd(), 'uploads');
+  app.useStaticAssets(uploadsPath, {
+    prefix: '/uploads',
+    maxAge: 86400000, // 1 day cache
+  });
+
+  // Get port configuration
+  const port = Number(process.env.PORT) || API_CONFIG.DEFAULT_PORT;
 
   // Setup Swagger documentation
   const config = new DocumentBuilder()
-    .setTitle('College Student Directory API')
-    .setDescription(
-      'A comprehensive API for managing college students, courses, attendance, and ID cards. ' +
-      'This API allows administrators to manage student records, track attendance, generate ID cards, ' +
-      'and manage course information. All endpoints except login and register require JWT authentication.'
+    .setTitle(DOCS_CONFIG.TITLE)
+    .setDescription(DOCS_CONFIG.DESCRIPTION)
+    .setVersion(API_CONFIG.VERSION)
+    .setContact(
+      DOCS_CONFIG.CONTACT.name,
+      DOCS_CONFIG.CONTACT.url,
+      DOCS_CONFIG.CONTACT.email,
     )
-    .setVersion('1.0')
-    .setContact('College Admin', 'https://college-directory.example.com', 'admin@college.edu')
-    .setLicense('MIT', 'https://opensource.org/licenses/MIT')
-    .addServer('http://localhost:3000/api/v1', 'Local Development Server')
+    .setLicense(DOCS_CONFIG.LICENSE.name, DOCS_CONFIG.LICENSE.url)
+    .addServer(getBaseUrl(port), 'Local Development Server')
     .addBearerAuth(
       {
         type: 'http',
@@ -61,13 +79,11 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config, {
     deepScanRoutes: true,
-    operationIdFactory: (
-      controllerKey: string,
-      methodKey: string
-    ) => methodKey,
+    operationIdFactory: (_controllerKey: string, methodKey: string) =>
+      methodKey,
   });
 
-  SwaggerModule.setup('api/docs', app, document, {
+  SwaggerModule.setup(DOCS_CONFIG.PATH, app, document, {
     swaggerOptions: {
       persistAuthorization: true,
       docExpansion: 'none',
@@ -82,11 +98,10 @@ async function bootstrap() {
     customCss: '.swagger-ui .topbar { display: none }',
   });
 
-  const port = process.env.PORT || 3000;
   await app.listen(port);
 
-  logger.log(`🚀 Application is running on: http://localhost:${port}/api/v1`);
-  logger.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
+  logger.log(`🚀 Application is running on: ${getApiBaseUrl(port)}`);
+  logger.log(`📚 API Documentation: ${getBaseUrl(port)}/${DOCS_CONFIG.PATH}`);
   logger.log(`📚 Environment: ${process.env.NODE_ENV || 'development'}`);
 }
 

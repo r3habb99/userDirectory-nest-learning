@@ -3,7 +3,36 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/services/prisma/prisma.service';
+import { API_CONFIG } from '../src/common/config/api.config';
 import * as bcrypt from 'bcryptjs';
+
+// Helper function to get typed HTTP server for supertest
+// Note: TypeScript may show warnings about 'any' type, but this is correct for supertest compatibility
+const getHttpServer = (app: INestApplication): any => app.getHttpServer();
+
+// Type definitions for API responses
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  message?: string;
+}
+
+interface AdminResponse {
+  id: string;
+  email: string;
+  name: string;
+  phone: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  password?: string; // Optional for testing password exclusion
+}
+
+interface LoginResponse {
+  accessToken: string;
+  tokenType: string;
+  admin: AdminResponse;
+}
 
 describe('Auth (e2e)', () => {
   let app: INestApplication;
@@ -26,7 +55,7 @@ describe('Auth (e2e)', () => {
         },
       }),
     );
-    app.setGlobalPrefix('api/v1');
+    app.setGlobalPrefix(API_CONFIG.PREFIX);
     await app.init();
     prismaService = moduleFixture.get<PrismaService>(PrismaService);
   });
@@ -40,7 +69,7 @@ describe('Auth (e2e)', () => {
     await prismaService.admin.deleteMany();
   });
 
-  describe('/api/v1/auth/register (POST)', () => {
+  describe('/auth/register (POST)', () => {
     const registerDto = {
       email: 'test@admin.com',
       password: 'password123',
@@ -49,15 +78,16 @@ describe('Auth (e2e)', () => {
     };
 
     it('should register a new admin successfully', () => {
-      return request(app.getHttpServer())
-        .post('/api/v1/auth/register')
+      return request(getHttpServer(app))
+        .post('/auth/register')
         .send(registerDto)
         .expect(201)
         .expect((res) => {
-          expect(res.body.success).toBe(true);
-          expect(res.body.data.email).toBe(registerDto.email);
-          expect(res.body.data.name).toBe(registerDto.name);
-          expect(res.body.data.password).toBeUndefined();
+          const body = res.body as ApiResponse<AdminResponse>;
+          expect(body.success).toBe(true);
+          expect(body.data?.email).toBe(registerDto.email);
+          expect(body.data?.name).toBe(registerDto.name);
+          expect(body.data?.password).toBeUndefined();
         });
     });
 
@@ -71,18 +101,19 @@ describe('Auth (e2e)', () => {
         },
       });
 
-      return request(app.getHttpServer())
-        .post('/api/v1/auth/register')
+      return request(getHttpServer(app))
+        .post('/auth/register')
         .send(registerDto)
         .expect(401)
         .expect((res) => {
-          expect(res.body.success).toBe(false);
+          const body = res.body as ApiResponse;
+          expect(body.success).toBe(false);
         });
     });
 
     it('should return 400 for invalid email format', () => {
-      return request(app.getHttpServer())
-        .post('/api/v1/auth/register')
+      return request(getHttpServer(app))
+        .post('/auth/register')
         .send({
           ...registerDto,
           email: 'invalid-email',
@@ -91,8 +122,8 @@ describe('Auth (e2e)', () => {
     });
 
     it('should return 400 for missing required fields', () => {
-      return request(app.getHttpServer())
-        .post('/api/v1/auth/register')
+      return request(getHttpServer(app))
+        .post('/auth/register')
         .send({
           email: registerDto.email,
           // missing password, name, phone
@@ -101,7 +132,7 @@ describe('Auth (e2e)', () => {
     });
   });
 
-  describe('/api/v1/auth/login (POST)', () => {
+  describe('/auth/login (POST)', () => {
     const adminData = {
       email: 'test@admin.com',
       password: 'password123',
@@ -121,45 +152,48 @@ describe('Auth (e2e)', () => {
     });
 
     it('should login successfully with valid credentials', () => {
-      return request(app.getHttpServer())
-        .post('/api/v1/auth/login')
+      return request(getHttpServer(app))
+        .post('/auth/login')
         .send({
           email: adminData.email,
           password: adminData.password,
         })
         .expect(200)
         .expect((res) => {
-          expect(res.body.success).toBe(true);
-          expect(res.body.data.accessToken).toBeDefined();
-          expect(res.body.data.tokenType).toBe('Bearer');
-          expect(res.body.data.admin.email).toBe(adminData.email);
-          expect(res.body.data.admin.password).toBeUndefined();
+          const body = res.body as ApiResponse<LoginResponse>;
+          expect(body.success).toBe(true);
+          expect(body.data?.accessToken).toBeDefined();
+          expect(body.data?.tokenType).toBe('Bearer');
+          expect(body.data?.admin.email).toBe(adminData.email);
+          expect(body.data?.admin.password).toBeUndefined();
         });
     });
 
     it('should return 401 for invalid email', () => {
-      return request(app.getHttpServer())
-        .post('/api/v1/auth/login')
+      return request(getHttpServer(app))
+        .post('/auth/login')
         .send({
           email: 'wrong@email.com',
           password: adminData.password,
         })
         .expect(401)
         .expect((res) => {
-          expect(res.body.success).toBe(false);
+          const body = res.body as ApiResponse;
+          expect(body.success).toBe(false);
         });
     });
 
     it('should return 401 for invalid password', () => {
-      return request(app.getHttpServer())
-        .post('/api/v1/auth/login')
+      return request(getHttpServer(app))
+        .post('/auth/login')
         .send({
           email: adminData.email,
-          password: 'wrongpassword',
+          password: 'wrong-password',
         })
         .expect(401)
         .expect((res) => {
-          expect(res.body.success).toBe(false);
+          const body = res.body as ApiResponse;
+          expect(body.success).toBe(false);
         });
     });
 
@@ -170,8 +204,8 @@ describe('Auth (e2e)', () => {
         data: { isActive: false },
       });
 
-      return request(app.getHttpServer())
-        .post('/api/v1/auth/login')
+      return request(getHttpServer(app))
+        .post('/auth/login')
         .send({
           email: adminData.email,
           password: adminData.password,
@@ -180,7 +214,7 @@ describe('Auth (e2e)', () => {
     });
   });
 
-  describe('/api/v1/auth/profile (POST)', () => {
+  describe('/auth/profile (POST)', () => {
     let authToken: string;
     const adminData = {
       email: 'test@admin.com',
@@ -199,36 +233,36 @@ describe('Auth (e2e)', () => {
         },
       });
 
-      const loginResponse = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
+      const loginResponse = await request(getHttpServer(app))
+        .post('/auth/login')
         .send({
           email: adminData.email,
           password: adminData.password,
         });
 
-      authToken = loginResponse.body.data.accessToken;
+      const loginBody = loginResponse.body as ApiResponse<LoginResponse>;
+      authToken = loginBody.data?.accessToken || '';
     });
 
     it('should get profile with valid token', () => {
-      return request(app.getHttpServer())
-        .post('/api/v1/auth/profile')
+      return request(getHttpServer(app))
+        .post('/auth/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
-          expect(res.body.success).toBe(true);
-          expect(res.body.data.email).toBe(adminData.email);
+          const body = res.body as ApiResponse<AdminResponse>;
+          expect(body.success).toBe(true);
+          expect(body.data?.email).toBe(adminData.email);
         });
     });
 
     it('should return 401 without token', () => {
-      return request(app.getHttpServer())
-        .post('/api/v1/auth/profile')
-        .expect(401);
+      return request(getHttpServer(app)).post('/auth/profile').expect(401);
     });
 
     it('should return 401 with invalid token', () => {
-      return request(app.getHttpServer())
-        .post('/api/v1/auth/profile')
+      return request(getHttpServer(app))
+        .post('/auth/profile')
         .set('Authorization', 'Bearer invalid-token')
         .expect(401);
     });

@@ -11,7 +11,8 @@ import { Student, Course } from '@prisma/client';
 import * as QRCode from 'qrcode';
 import { createCanvas, loadImage } from 'canvas';
 import * as fs from 'fs';
-import * as path from 'path';
+import { UploadConfigService } from '../../common/config/upload.config';
+import { UploadCategory } from '../../common/interfaces/upload.interface';
 
 // Type definitions for Prisma relations
 type StudentWithCourse = Student & {
@@ -22,7 +23,10 @@ type StudentWithCourse = Student & {
 export class IdCardService {
   private readonly logger = new Logger(IdCardService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploadConfig: UploadConfigService,
+  ) {}
 
   /**
    * Generate ID card for a student
@@ -356,18 +360,39 @@ export class IdCardService {
         height - 20,
       );
 
-      // Save image
-      const uploadsDir = path.join(process.cwd(), 'uploads', 'id-cards');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
+      // Generate a unique filename
+      const fileName = `id-card-${student.enrollmentNumber}-${Date.now()}.png`;
+
+      // Get the upload directory path
+      const uploadPath = this.uploadConfig.getUploadPath(
+        UploadCategory.ID_CARDS,
+      );
+
+      // Ensure the directory exists
+      const filePath = this.uploadConfig.getFilePath(
+        UploadCategory.ID_CARDS,
+        fileName,
+      );
+
+      // Convert canvas to buffer
+      const buffer = canvas.toBuffer('image/png');
+
+      // Save the file directly using upload config
+      const fileUrl = this.uploadConfig.getFileUrl(
+        UploadCategory.ID_CARDS,
+        fileName,
+      );
+
+      // Write the file to disk
+      // Ensure directory exists
+      if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath, { recursive: true });
       }
 
-      const fileName = `id-card-${student.enrollmentNumber}-${Date.now()}.png`;
-      const filePath = path.join(uploadsDir, fileName);
-      const buffer = canvas.toBuffer('image/png');
+      // Write file
       fs.writeFileSync(filePath, buffer);
 
-      return `/uploads/id-cards/${fileName}`;
+      return fileUrl;
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.stack : 'Unknown error';

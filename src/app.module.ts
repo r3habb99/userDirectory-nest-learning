@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { IdCardModule } from './modules/id-card/id-card.module';
+import { UploadModule } from './modules/upload/upload.module';
 import { PrismaService } from './services/prisma/prisma.service';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -25,6 +26,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     AdminModule,
     AttendanceModule,
     IdCardModule,
+    UploadModule,
     UsersModule, // Keep for backward compatibility
     CourseModule,
     StudentModule,
