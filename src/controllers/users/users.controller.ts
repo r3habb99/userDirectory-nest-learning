@@ -10,9 +10,9 @@ import {
   ParseIntPipe,
   ValidationPipe,
 } from '@nestjs/common';
-import { UsersService } from 'src/services/users/users.service';
-import { CreateUserDto } from 'src/dto/create-user.dto';
-import { UpdateUserDto } from 'src/dto/update-user.dto';
+import { UsersService } from '../../services/users/users.service';
+import { CreateUserDto } from '../../dto/create-user.dto';
+import { UpdateUserDto } from '../../dto/update-user.dto';
 
 @Controller('users') // route /users known as decorator it is predefined function here
 export class UsersController {

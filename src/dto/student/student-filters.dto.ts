@@ -1,4 +1,10 @@
-import { IsOptional, IsEnum, IsInt, IsBoolean, IsString } from 'class-validator';
+import {
+  IsOptional,
+  IsEnum,
+  IsInt,
+  IsBoolean,
+  IsString,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CourseType } from '../../common/types/enrollment.types';
 
@@ -16,7 +22,7 @@ export class StudentFiltersDto {
 
   @IsOptional()
   @IsBoolean({ message: 'isActive must be a boolean' })
-  @Transform(({ value }) => {
+  @Transform(({ value }): boolean | undefined => {
     if (value === 'true') return true;
     if (value === 'false') return false;
     return value;
@@ -25,7 +31,7 @@ export class StudentFiltersDto {
 
   @IsOptional()
   @IsString({ message: 'Search term must be a string' })
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: { value: string }) => value?.trim())
   search?: string;
 
   @IsOptional()

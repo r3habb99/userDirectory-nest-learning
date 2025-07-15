@@ -13,7 +13,10 @@ export class CreateAttendanceDto {
   @IsNotEmpty({ message: 'Student ID is required' })
   studentId: string;
 
-  @IsDateString({}, { message: 'Date must be a valid date string (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Date must be a valid date string (YYYY-MM-DD)' },
+  )
   date: string;
 
   @IsEnum(AttendanceStatus, {
@@ -23,6 +26,6 @@ export class CreateAttendanceDto {
 
   @IsOptional()
   @IsString({ message: 'Remarks must be a string' })
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: { value: string }) => value?.trim())
   remarks?: string;
 }

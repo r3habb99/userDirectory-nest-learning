@@ -7,14 +7,20 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
+  // UseGuards,
   ValidationPipe,
 } from '@nestjs/common';
 import { CourseService } from '../../services/course/course.service';
 import { CreateCourseDto } from '../../dto/course/create-course.dto';
 import { UpdateCourseDto } from '../../dto/course/update-course.dto';
-import { CourseType, PaginationOptions } from '../../common/types/enrollment.types';
-import { ApiResponse, PaginatedResponse } from '../../common/interfaces/api-response.interface';
+import {
+  CourseType,
+  PaginationOptions,
+} from '../../common/types/enrollment.types';
+import {
+  ApiResponse,
+  PaginatedResponse,
+} from '../../common/interfaces/api-response.interface';
 
 @Controller('courses')
 export class CourseController {

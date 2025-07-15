@@ -4,14 +4,17 @@ import { EnrollmentService } from '../enrollment/enrollment.service';
 import { CreateStudentDto } from '../../dto/student/create-student.dto';
 import { UpdateStudentDto } from '../../dto/student/update-student.dto';
 import { StudentFiltersDto } from '../../dto/student/student-filters.dto';
-import { 
+import {
   StudentNotFoundException,
   CourseNotFoundException,
   DuplicateEmailException,
 } from '../../common/exceptions/custom.exceptions';
 import { ResponseUtils } from '../../common/utils/response.utils';
 import { EnrollmentUtils } from '../../common/utils/enrollment.utils';
-import { ApiResponse, PaginatedResponse } from '../../common/interfaces/api-response.interface';
+import {
+  ApiResponse,
+  PaginatedResponse,
+} from '../../common/interfaces/api-response.interface';
 
 @Injectable()
 export class StudentService {
@@ -25,7 +28,10 @@ export class StudentService {
   /**
    * Create a new student with auto-generated enrollment number
    */
-  async create(createStudentDto: CreateStudentDto, createdBy: string): Promise<ApiResponse> {
+  async create(
+    createStudentDto: CreateStudentDto,
+    createdBy: string,
+  ): Promise<ApiResponse> {
     try {
       // Validate course exists
       const course = await this.prisma.course.findUnique({
@@ -59,10 +65,11 @@ export class StudentService {
       }
 
       // Generate enrollment number
-      const enrollmentNumber = await this.enrollmentService.generateEnrollmentNumber(
-        createStudentDto.courseId,
-        createStudentDto.admissionYear,
-      );
+      const enrollmentNumber =
+        await this.enrollmentService.generateEnrollmentNumber(
+          createStudentDto.courseId,
+          createStudentDto.admissionYear,
+        );
 
       // Create student
       const student = await this.prisma.student.create({
@@ -83,11 +90,16 @@ export class StudentService {
         },
       });
 
-      this.logger.log(`Created student: ${student.name} (${student.enrollmentNumber})`);
+      this.logger.log(
+        `Created student: ${student.name} (${student.enrollmentNumber})`,
+      );
 
       return ResponseUtils.created(student, 'Student created successfully');
     } catch (error) {
-      this.logger.error('Failed to create student', error.stack);
+      this.logger.error(
+        'Failed to create student',
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -111,7 +123,17 @@ export class StudentService {
       const skip = (page - 1) * limit;
 
       // Build where clause
-      const where: any = {};
+      const where: {
+        course?: { type: any };
+        admissionYear?: number;
+        isActive?: boolean;
+        OR?: Array<{
+          name?: { contains: string; mode: 'insensitive' };
+          email?: { contains: string; mode: 'insensitive' };
+          enrollmentNumber?: { contains: string; mode: 'insensitive' };
+          phone?: { contains: string; mode: 'insensitive' };
+        }>;
+      } = {};
 
       if (course) {
         where.course = { type: course };
@@ -127,10 +149,10 @@ export class StudentService {
 
       if (search) {
         where.OR = [
-          { name: { contains: search } },
-          { enrollmentNumber: { contains: search } },
-          { email: { contains: search } },
-          { phone: { contains: search } },
+          { name: { contains: search, mode: 'insensitive' } },
+          { enrollmentNumber: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+          { phone: { contains: search, mode: 'insensitive' } },
         ];
       }
 
@@ -169,7 +191,10 @@ export class StudentService {
         'Students retrieved successfully',
       );
     } catch (error) {
-      this.logger.error('Failed to retrieve students', error.stack);
+      this.logger.error(
+        'Failed to retrieve students',
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -216,7 +241,10 @@ export class StudentService {
 
       return ResponseUtils.success(student, 'Student retrieved successfully');
     } catch (error) {
-      this.logger.error(`Failed to retrieve student with ID: ${id}`, error.stack);
+      this.logger.error(
+        `Failed to retrieve student with ID: ${id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -265,7 +293,7 @@ export class StudentService {
     } catch (error) {
       this.logger.error(
         `Failed to retrieve student with enrollment number: ${enrollmentNumber}`,
-        error.stack,
+        error instanceof Error ? error.stack : String(error),
       );
       throw error;
     }
@@ -274,7 +302,10 @@ export class StudentService {
   /**
    * Update student
    */
-  async update(id: string, updateStudentDto: UpdateStudentDto): Promise<ApiResponse> {
+  async update(
+    id: string,
+    updateStudentDto: UpdateStudentDto,
+  ): Promise<ApiResponse> {
     try {
       // Check if student exists
       const existingStudent = await this.prisma.student.findUnique({
@@ -287,7 +318,10 @@ export class StudentService {
       }
 
       // Check for duplicate email if updating email
-      if (updateStudentDto.email && updateStudentDto.email !== existingStudent.email) {
+      if (
+        updateStudentDto.email &&
+        updateStudentDto.email !== existingStudent.email
+      ) {
         const studentWithEmail = await this.prisma.student.findUnique({
           where: { email: updateStudentDto.email },
         });
@@ -299,8 +333,10 @@ export class StudentService {
 
       // Validate years if updating them
       if (updateStudentDto.admissionYear || updateStudentDto.passoutYear) {
-        const admissionYear = updateStudentDto.admissionYear || existingStudent.admissionYear;
-        const passoutYear = updateStudentDto.passoutYear || existingStudent.passoutYear;
+        const admissionYear =
+          updateStudentDto.admissionYear || existingStudent.admissionYear;
+        const passoutYear =
+          updateStudentDto.passoutYear || existingStudent.passoutYear;
 
         const yearValidation = EnrollmentUtils.validateYears(
           admissionYear,
@@ -309,7 +345,10 @@ export class StudentService {
         );
 
         if (!yearValidation.isValid) {
-          return ResponseUtils.badRequest(yearValidation.error, 'INVALID_YEARS');
+          return ResponseUtils.badRequest(
+            yearValidation.error,
+            'INVALID_YEARS',
+          );
         }
       }
 
@@ -328,11 +367,19 @@ export class StudentService {
         },
       });
 
-      this.logger.log(`Updated student: ${updatedStudent.name} (${updatedStudent.enrollmentNumber})`);
+      this.logger.log(
+        `Updated student: ${updatedStudent.name} (${updatedStudent.enrollmentNumber})`,
+      );
 
-      return ResponseUtils.success(updatedStudent, 'Student updated successfully');
+      return ResponseUtils.success(
+        updatedStudent,
+        'Student updated successfully',
+      );
     } catch (error) {
-      this.logger.error(`Failed to update student with ID: ${id}`, error.stack);
+      this.logger.error(
+        `Failed to update student with ID: ${id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -355,11 +402,16 @@ export class StudentService {
         data: { isActive: false },
       });
 
-      this.logger.log(`Deactivated student: ${student.name} (${student.enrollmentNumber})`);
+      this.logger.log(
+        `Deactivated student: ${student.name} (${student.enrollmentNumber})`,
+      );
 
       return ResponseUtils.success(null, 'Student deactivated successfully');
     } catch (error) {
-      this.logger.error(`Failed to delete student with ID: ${id}`, error.stack);
+      this.logger.error(
+        `Failed to delete student with ID: ${id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -369,31 +421,27 @@ export class StudentService {
    */
   async getStatistics(): Promise<ApiResponse> {
     try {
-      const [
-        totalStudents,
-        activeStudents,
-        courseStats,
-        yearStats,
-      ] = await Promise.all([
-        this.prisma.student.count(),
-        this.prisma.student.count({ where: { isActive: true } }),
-        this.prisma.student.groupBy({
-          by: ['courseId'],
-          _count: { id: true },
-          where: { isActive: true },
-        }),
-        this.prisma.student.groupBy({
-          by: ['admissionYear'],
-          _count: { id: true },
-          where: { isActive: true },
-          orderBy: { admissionYear: 'desc' },
-        }),
-      ]);
+      const [totalStudents, activeStudents, courseStats, yearStats] =
+        await Promise.all([
+          this.prisma.student.count(),
+          this.prisma.student.count({ where: { isActive: true } }),
+          this.prisma.student.groupBy({
+            by: ['courseId'],
+            _count: { id: true },
+            where: { isActive: true },
+          }),
+          this.prisma.student.groupBy({
+            by: ['admissionYear'],
+            _count: { id: true },
+            where: { isActive: true },
+            orderBy: { admissionYear: 'desc' },
+          }),
+        ]);
 
       // Get course details for course stats
       const courseDetails = await this.prisma.course.findMany({
         where: {
-          id: { in: courseStats.map(stat => stat.courseId) },
+          id: { in: courseStats.map((stat) => stat.courseId) },
         },
         select: {
           id: true,
@@ -402,8 +450,8 @@ export class StudentService {
         },
       });
 
-      const enrichedCourseStats = courseStats.map(stat => {
-        const course = courseDetails.find(c => c.id === stat.courseId);
+      const enrichedCourseStats = courseStats.map((stat) => {
+        const course = courseDetails.find((c) => c.id === stat.courseId);
         return {
           courseId: stat.courseId,
           courseName: course?.name,
@@ -417,15 +465,21 @@ export class StudentService {
         activeStudents,
         inactiveStudents: totalStudents - activeStudents,
         courseStats: enrichedCourseStats,
-        yearStats: yearStats.map(stat => ({
+        yearStats: yearStats.map((stat) => ({
           admissionYear: stat.admissionYear,
           studentCount: stat._count.id,
         })),
       };
 
-      return ResponseUtils.success(result, 'Student statistics retrieved successfully');
+      return ResponseUtils.success(
+        result,
+        'Student statistics retrieved successfully',
+      );
     } catch (error) {
-      this.logger.error('Failed to retrieve student statistics', error.stack);
+      this.logger.error(
+        'Failed to retrieve student statistics',
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -464,7 +518,10 @@ export class StudentService {
 
       return ResponseUtils.success(students, 'Search completed successfully');
     } catch (error) {
-      this.logger.error(`Failed to search students with query: ${query}`, error.stack);
+      this.logger.error(
+        `Failed to search students with query: ${query}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }

@@ -27,13 +27,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      
       if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        const responseObj = exceptionResponse as any;
+        const responseObj = exceptionResponse as {
+          message?: string;
+          error?: string;
+        };
         message = responseObj.message || exception.message;
         error = responseObj.error || 'HTTP_EXCEPTION';
       } else {
-        message = exceptionResponse as string;
+        message = String(exceptionResponse);
       }
     }
     // Handle Prisma errors
@@ -46,7 +48,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // Handle other errors
     else if (exception instanceof Error) {
       message = exception.message;
-      this.logger.error(`Unexpected error: ${exception.message}`, exception.stack);
+      this.logger.error(
+        `Unexpected error: ${exception.message}`,
+        exception.stack,
+      );
     }
 
     const errorResponse: ApiResponse = {
@@ -71,12 +76,19 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     error: string;
   } {
     switch (error.code) {
-      case 'P2002':
+      case 'P2002': {
+        const target = error.meta?.target;
+        const targetString = Array.isArray(target)
+          ? target.join(', ')
+          : typeof target === 'string'
+            ? target
+            : 'field';
         return {
           status: HttpStatus.CONFLICT,
-          message: `Duplicate entry for ${error.meta?.target || 'field'}`,
+          message: `Duplicate entry for ${targetString}`,
           error: 'DUPLICATE_ENTRY',
         };
+      }
       case 'P2025':
         return {
           status: HttpStatus.NOT_FOUND,

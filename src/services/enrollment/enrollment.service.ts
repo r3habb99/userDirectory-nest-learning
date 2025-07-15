@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CourseType } from '../../common/types/enrollment.types';
+import { EnrollmentStats } from '../../common/interfaces';
 import { EnrollmentUtils } from '../../common/utils/enrollment.utils';
 import {
   DuplicateEnrollmentException,
@@ -84,7 +85,7 @@ export class EnrollmentService {
     } catch (error) {
       this.logger.error(
         `Failed to generate enrollment number for course ${courseId}, year ${admissionYear}`,
-        error.stack,
+        error instanceof Error ? error.stack : String(error),
       );
       throw error;
     }
@@ -129,7 +130,7 @@ export class EnrollmentService {
     } catch (error) {
       this.logger.error(
         `Failed to get enrollment stats for ${courseType} ${year}`,
-        error.stack,
+        error instanceof Error ? error.stack : String(error),
       );
       throw error;
     }
@@ -138,15 +139,7 @@ export class EnrollmentService {
   /**
    * Get enrollment statistics for all courses and years
    */
-  async getAllEnrollmentStats(): Promise<
-    Array<{
-      courseType: CourseType;
-      year: number;
-      totalEnrolled: number;
-      availableSlots: number;
-      lastEnrollmentNumber: string | null;
-    }>
-  > {
+  async getAllEnrollmentStats(): Promise<EnrollmentStats[]> {
     try {
       const counters = await this.prisma.enrollmentCounter.findMany({
         orderBy: [{ year: 'desc' }, { courseType: 'asc' }],
@@ -164,7 +157,10 @@ export class EnrollmentService {
         ),
       }));
     } catch (error) {
-      this.logger.error('Failed to get all enrollment stats', error.stack);
+      this.logger.error(
+        'Failed to get all enrollment stats',
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -183,8 +179,9 @@ export class EnrollmentService {
   }> {
     try {
       // Parse enrollment number
-      const parsedData = EnrollmentUtils.parseEnrollmentNumber(enrollmentNumber);
-      
+      const parsedData =
+        EnrollmentUtils.parseEnrollmentNumber(enrollmentNumber);
+
       if (!parsedData) {
         return {
           isValid: false,
@@ -215,7 +212,7 @@ export class EnrollmentService {
     } catch (error) {
       this.logger.error(
         `Failed to validate enrollment number: ${enrollmentNumber}`,
-        error.stack,
+        error instanceof Error ? error.stack : String(error),
       );
       throw error;
     }
@@ -246,13 +243,11 @@ export class EnrollmentService {
         },
       });
 
-      this.logger.log(
-        `Reset enrollment counter for ${courseType} ${year}`,
-      );
+      this.logger.log(`Reset enrollment counter for ${courseType} ${year}`);
     } catch (error) {
       this.logger.error(
         `Failed to reset enrollment counter for ${courseType} ${year}`,
-        error.stack,
+        error instanceof Error ? error.stack : String(error),
       );
       throw error;
     }

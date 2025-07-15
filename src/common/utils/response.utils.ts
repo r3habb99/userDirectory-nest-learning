@@ -1,5 +1,8 @@
 import { HttpStatus } from '@nestjs/common';
-import { ApiResponse, PaginatedResponse } from '../interfaces/api-response.interface';
+import {
+  ApiResponse,
+  PaginatedResponse,
+} from '../interfaces/api-response.interface';
 
 export class ResponseUtils {
   /**

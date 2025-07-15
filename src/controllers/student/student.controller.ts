@@ -11,24 +11,39 @@ import {
   ValidationPipe,
   Request,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse as SwaggerResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { StudentService } from '../../services/student/student.service';
 import { CreateStudentDto } from '../../dto/student/create-student.dto';
 import { UpdateStudentDto } from '../../dto/student/update-student.dto';
 import { StudentFiltersDto } from '../../dto/student/student-filters.dto';
-import { ApiResponse, PaginatedResponse } from '../../common/interfaces/api-response.interface';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import {
+  ApiResponse,
+  PaginatedResponse,
+  AuthenticatedRequest,
+} from '../../common/interfaces';
 
+@ApiTags('Students')
 @Controller('students')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth('JWT-auth')
 export class StudentController {
   constructor(private readonly studentService: StudentService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a new student' })
+  @SwaggerResponse({ status: 201, description: 'Student created successfully' })
+  @SwaggerResponse({ status: 400, description: 'Invalid input data' })
   async create(
     @Body(ValidationPipe) createStudentDto: CreateStudentDto,
-    @Request() req: any, // Will be replaced with proper auth guard
+    @Request() req: AuthenticatedRequest,
   ): Promise<ApiResponse> {
-    // For now, using a placeholder admin ID
-    // This will be replaced with actual admin ID from JWT token
-    const createdBy = req.user?.id || 'admin-placeholder';
+    const createdBy: string = req.user.id;
     return this.studentService.create(createStudentDto, createdBy);
   }
 

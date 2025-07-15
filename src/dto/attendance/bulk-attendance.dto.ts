@@ -23,12 +23,15 @@ class BulkAttendanceItemDto {
 
   @IsOptional()
   @IsString({ message: 'Remarks must be a string' })
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: { value: string }) => value?.trim())
   remarks?: string;
 }
 
 export class BulkAttendanceDto {
-  @IsDateString({}, { message: 'Date must be a valid date string (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Date must be a valid date string (YYYY-MM-DD)' },
+  )
   date: string;
 
   @IsArray({ message: 'Attendance records must be an array' })

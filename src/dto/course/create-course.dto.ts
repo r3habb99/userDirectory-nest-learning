@@ -14,7 +14,7 @@ import { CourseType } from '../../common/types/enrollment.types';
 export class CreateCourseDto {
   @IsString({ message: 'Course name must be a string' })
   @IsNotEmpty({ message: 'Course name is required' })
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: { value: string }) => value?.trim())
   name: string;
 
   @IsEnum(CourseType, {

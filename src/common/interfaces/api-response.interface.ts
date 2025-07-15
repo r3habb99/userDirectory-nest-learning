@@ -1,4 +1,4 @@
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
@@ -17,6 +17,9 @@ export interface PaginatedResponse<T = any> extends ApiResponse<T[]> {
   };
 }
 
+/**
+ * @deprecated Use LoginResponseData from auth.interface.ts instead
+ */
 export interface AuthResponse {
   user: {
     id: string;

@@ -16,17 +16,17 @@ import { Gender } from '../../common/types/enrollment.types';
 export class CreateStudentDto {
   @IsString({ message: 'Name must be a string' })
   @IsNotEmpty({ message: 'Name is required' })
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }: { value: string }) => value?.trim())
   name: string;
 
   @IsOptional()
   @IsEmail({}, { message: 'Please provide a valid email address' })
-  @Transform(({ value }) => value?.toLowerCase().trim())
+  @Transform(({ value }: { value: string }) => value?.toLowerCase().trim())
   email?: string;
 
   @IsString({ message: 'Phone must be a string' })
   @IsNotEmpty({ message: 'Phone is required' })
-  @Matches(/^[+]?[\d\s\-\(\)]{10,15}$/, {
+  @Matches(/^[+]?[\d\s\-()]{10,15}$/, {
     message: 'Please provide a valid phone number',
   })
   phone: string;
@@ -49,16 +49,16 @@ export class CreateStudentDto {
   @IsInt({ message: 'Admission year must be an integer' })
   @Type(() => Number)
   @Min(2020, { message: 'Admission year cannot be before 2020' })
-  @Max(new Date().getFullYear() + 1, { 
-    message: 'Admission year cannot be more than one year in the future' 
+  @Max(new Date().getFullYear() + 1, {
+    message: 'Admission year cannot be more than one year in the future',
   })
   admissionYear: number;
 
   @IsInt({ message: 'Passout year must be an integer' })
   @Type(() => Number)
   @Min(2021, { message: 'Passout year cannot be before 2021' })
-  @Max(new Date().getFullYear() + 10, { 
-    message: 'Passout year cannot be more than 10 years in the future' 
+  @Max(new Date().getFullYear() + 10, {
+    message: 'Passout year cannot be more than 10 years in the future',
   })
   passoutYear: number;
 

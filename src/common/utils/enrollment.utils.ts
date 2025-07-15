@@ -74,21 +74,31 @@ export class EnrollmentUtils {
   }
 
   /**
-   * Calculate expected passout year based on admission year and course
+   * Calculate expected graduation year based on admission year and course
    */
-  static calculatePassoutYear(admissionYear: number, course: CourseType): number {
+  static calculateGraduationYear(
+    admissionYear: number,
+    course: CourseType,
+  ): number {
     return admissionYear + this.getCourseDuration(course);
   }
 
   /**
    * Validate admission and passout years
    */
-  static validateYears(admissionYear: number, passoutYear: number, course: CourseType): {
+  static validateYears(
+    admissionYear: number,
+    passoutYear: number,
+    course: CourseType,
+  ): {
     isValid: boolean;
     error?: string;
   } {
     const currentYear = new Date().getFullYear();
-    const expectedPassoutYear = this.calculatePassoutYear(admissionYear, course);
+    const expectedPassoutYear = this.calculateGraduationYear(
+      admissionYear,
+      course,
+    );
 
     if (admissionYear > currentYear + 1) {
       return {

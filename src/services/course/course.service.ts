@@ -2,10 +2,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCourseDto } from '../../dto/course/create-course.dto';
 import { UpdateCourseDto } from '../../dto/course/update-course.dto';
-import { CourseType, PaginationOptions } from '../../common/types/enrollment.types';
+import {
+  CourseType,
+  PaginationOptions,
+} from '../../common/types/enrollment.types';
 import { CourseNotFoundException } from '../../common/exceptions/custom.exceptions';
 import { ResponseUtils } from '../../common/utils/response.utils';
-import { ApiResponse, PaginatedResponse } from '../../common/interfaces/api-response.interface';
+import {
+  ApiResponse,
+  PaginatedResponse,
+} from '../../common/interfaces/api-response.interface';
 
 @Injectable()
 export class CourseService {
@@ -43,7 +49,10 @@ export class CourseService {
 
       return ResponseUtils.created(course, 'Course created successfully');
     } catch (error) {
-      this.logger.error('Failed to create course', error.stack);
+      this.logger.error(
+        'Failed to create course',
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -51,7 +60,9 @@ export class CourseService {
   /**
    * Get all courses with pagination and filtering
    */
-  async findAll(options: PaginationOptions & { isActive?: boolean }): Promise<PaginatedResponse> {
+  async findAll(
+    options: PaginationOptions & { isActive?: boolean },
+  ): Promise<PaginatedResponse> {
     try {
       const {
         page = 1,
@@ -88,7 +99,10 @@ export class CourseService {
         'Courses retrieved successfully',
       );
     } catch (error) {
-      this.logger.error('Failed to retrieve courses', error.stack);
+      this.logger.error(
+        'Failed to retrieve courses',
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -124,7 +138,10 @@ export class CourseService {
 
       return ResponseUtils.success(course, 'Course retrieved successfully');
     } catch (error) {
-      this.logger.error(`Failed to retrieve course with ID: ${id}`, error.stack);
+      this.logger.error(
+        `Failed to retrieve course with ID: ${id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -160,7 +177,10 @@ export class CourseService {
 
       return ResponseUtils.success(course, 'Course retrieved successfully');
     } catch (error) {
-      this.logger.error(`Failed to retrieve course with type: ${type}`, error.stack);
+      this.logger.error(
+        `Failed to retrieve course with type: ${type}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -168,7 +188,10 @@ export class CourseService {
   /**
    * Update course
    */
-  async update(id: string, updateCourseDto: UpdateCourseDto): Promise<ApiResponse> {
+  async update(
+    id: string,
+    updateCourseDto: UpdateCourseDto,
+  ): Promise<ApiResponse> {
     try {
       // Check if course exists
       const existingCourse = await this.prisma.course.findUnique({
@@ -180,7 +203,10 @@ export class CourseService {
       }
 
       // If updating type, check if new type already exists
-      if (updateCourseDto.type && updateCourseDto.type !== existingCourse.type) {
+      if (
+        updateCourseDto.type &&
+        updateCourseDto.type !== existingCourse.type
+      ) {
         const courseWithNewType = await this.prisma.course.findUnique({
           where: { type: updateCourseDto.type },
         });
@@ -203,11 +229,19 @@ export class CourseService {
         },
       });
 
-      this.logger.log(`Updated course: ${updatedCourse.name} (${updatedCourse.type})`);
+      this.logger.log(
+        `Updated course: ${updatedCourse.name} (${updatedCourse.type})`,
+      );
 
-      return ResponseUtils.success(updatedCourse, 'Course updated successfully');
+      return ResponseUtils.success(
+        updatedCourse,
+        'Course updated successfully',
+      );
     } catch (error) {
-      this.logger.error(`Failed to update course with ID: ${id}`, error.stack);
+      this.logger.error(
+        `Failed to update course with ID: ${id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -247,7 +281,10 @@ export class CourseService {
 
       return ResponseUtils.success(null, 'Course deactivated successfully');
     } catch (error) {
-      this.logger.error(`Failed to delete course with ID: ${id}`, error.stack);
+      this.logger.error(
+        `Failed to delete course with ID: ${id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -272,8 +309,11 @@ export class CourseService {
       });
 
       const totalCourses = stats.length;
-      const activeCourses = stats.filter(course => course.isActive).length;
-      const totalStudents = stats.reduce((sum, course) => sum + course._count.students, 0);
+      const activeCourses = stats.filter((course) => course.isActive).length;
+      const totalStudents = stats.reduce(
+        (sum, course) => sum + course._count.students,
+        0,
+      );
 
       const result = {
         totalCourses,
@@ -282,9 +322,15 @@ export class CourseService {
         courseDetails: stats,
       };
 
-      return ResponseUtils.success(result, 'Course statistics retrieved successfully');
+      return ResponseUtils.success(
+        result,
+        'Course statistics retrieved successfully',
+      );
     } catch (error) {
-      this.logger.error('Failed to retrieve course statistics', error.stack);
+      this.logger.error(
+        'Failed to retrieve course statistics',
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
