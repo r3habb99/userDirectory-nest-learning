@@ -3,7 +3,6 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UsersModule } from './modules/users/users.module';
 import { CourseModule } from './modules/course/course.module';
 import { StudentModule } from './modules/student/student.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -27,7 +26,6 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     AttendanceModule,
     IdCardModule,
     UploadModule,
-    UsersModule, // Keep for backward compatibility
     CourseModule,
     StudentModule,
   ],
