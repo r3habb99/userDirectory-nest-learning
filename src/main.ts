@@ -31,8 +31,15 @@ async function bootstrap() {
   // Setup Swagger documentation
   const config = new DocumentBuilder()
     .setTitle('College Student Directory API')
-    .setDescription('A comprehensive API for managing college students, courses, attendance, and ID cards')
+    .setDescription(
+      'A comprehensive API for managing college students, courses, attendance, and ID cards. ' +
+      'This API allows administrators to manage student records, track attendance, generate ID cards, ' +
+      'and manage course information. All endpoints except login and register require JWT authentication.'
+    )
     .setVersion('1.0')
+    .setContact('College Admin', 'https://college-directory.example.com', 'admin@college.edu')
+    .setLicense('MIT', 'https://opensource.org/licenses/MIT')
+    .addServer('http://localhost:3000/api/v1', 'Local Development Server')
     .addBearerAuth(
       {
         type: 'http',
@@ -49,14 +56,30 @@ async function bootstrap() {
     .addTag('Courses', 'Course management endpoints')
     .addTag('Attendance', 'Attendance management endpoints')
     .addTag('ID Cards', 'ID card generation and management endpoints')
-    .addTag('Admin', 'Admin management endpoints')
+    .addTag('Admin Management', 'Admin user management endpoints')
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, config, {
+    deepScanRoutes: true,
+    operationIdFactory: (
+      controllerKey: string,
+      methodKey: string
+    ) => methodKey,
+  });
+
   SwaggerModule.setup('api/docs', app, document, {
     swaggerOptions: {
       persistAuthorization: true,
+      docExpansion: 'none',
+      filter: true,
+      showExtensions: true,
+      showCommonExtensions: true,
+      defaultModelsExpandDepth: 1,
+      defaultModelExpandDepth: 1,
     },
+    customSiteTitle: 'College Student Directory API Documentation',
+    customfavIcon: 'https://nestjs.com/img/logo_text.svg',
+    customCss: '.swagger-ui .topbar { display: none }',
   });
 
   const port = process.env.PORT || 3000;

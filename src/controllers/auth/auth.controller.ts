@@ -22,6 +22,7 @@ import { ChangePasswordDto } from '../../dto/auth/change-password.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { ApiResponse, AuthenticatedRequest } from '../../common/interfaces';
+import { LoginResponseDto, ApiResponseDto, ErrorResponseDto } from '../../dto/common/api-response.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -32,8 +33,16 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Admin login' })
-  @SwaggerResponse({ status: 200, description: 'Login successful' })
-  @SwaggerResponse({ status: 401, description: 'Invalid credentials' })
+  @SwaggerResponse({
+    status: 200,
+    description: 'Login successful',
+    type: LoginResponseDto,
+  })
+  @SwaggerResponse({
+    status: 401,
+    description: 'Invalid credentials',
+    type: ErrorResponseDto,
+  })
   async login(@Body(ValidationPipe) loginDto: LoginDto): Promise<ApiResponse> {
     return this.authService.login(loginDto);
   }
@@ -44,10 +53,12 @@ export class AuthController {
   @SwaggerResponse({
     status: 201,
     description: 'Admin registered successfully',
+    type: ApiResponseDto,
   })
   @SwaggerResponse({
     status: 400,
     description: 'Admin with this email already exists',
+    type: ErrorResponseDto,
   })
   async register(
     @Body(ValidationPipe) registerDto: RegisterAdminDto,

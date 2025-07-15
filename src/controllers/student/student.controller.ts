@@ -16,6 +16,8 @@ import {
   ApiOperation,
   ApiResponse as SwaggerResponse,
   ApiBearerAuth,
+  ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 import { StudentService } from '../../services/student/student.service';
 import { CreateStudentDto } from '../../dto/student/create-student.dto';
@@ -48,6 +50,11 @@ export class StudentController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get all students with pagination and filters' })
+  @SwaggerResponse({
+    status: 200,
+    description: 'Students retrieved successfully',
+  })
   async findAll(
     @Query(ValidationPipe) filters: StudentFiltersDto,
   ): Promise<PaginatedResponse> {
@@ -55,11 +62,29 @@ export class StudentController {
   }
 
   @Get('statistics')
+  @ApiOperation({ summary: 'Get student statistics' })
+  @SwaggerResponse({
+    status: 200,
+    description: 'Student statistics retrieved successfully',
+  })
   async getStatistics(): Promise<ApiResponse> {
     return this.studentService.getStatistics();
   }
 
   @Get('search')
+  @ApiOperation({
+    summary: 'Search students by name, email, or enrollment number',
+  })
+  @ApiQuery({
+    name: 'q',
+    description: 'Search query (minimum 2 characters)',
+    example: 'John',
+  })
+  @SwaggerResponse({
+    status: 200,
+    description: 'Search results retrieved successfully',
+  })
+  @SwaggerResponse({ status: 400, description: 'Search query too short' })
   async search(@Query('q') query: string): Promise<ApiResponse> {
     if (!query || query.trim().length < 2) {
       return {
@@ -72,6 +97,17 @@ export class StudentController {
   }
 
   @Get('enrollment/:enrollmentNumber')
+  @ApiOperation({ summary: 'Get student by enrollment number' })
+  @ApiParam({
+    name: 'enrollmentNumber',
+    description: 'Student enrollment number',
+    example: '2024BCA001',
+  })
+  @SwaggerResponse({
+    status: 200,
+    description: 'Student retrieved successfully',
+  })
+  @SwaggerResponse({ status: 404, description: 'Student not found' })
   async findByEnrollmentNumber(
     @Param('enrollmentNumber') enrollmentNumber: string,
   ): Promise<ApiResponse> {
@@ -79,11 +115,22 @@ export class StudentController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get student by ID' })
+  @ApiParam({ name: 'id', description: 'Student ID' })
+  @SwaggerResponse({
+    status: 200,
+    description: 'Student retrieved successfully',
+  })
+  @SwaggerResponse({ status: 404, description: 'Student not found' })
   async findOne(@Param('id') id: string): Promise<ApiResponse> {
     return this.studentService.findOne(id);
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update student by ID' })
+  @ApiParam({ name: 'id', description: 'Student ID' })
+  @SwaggerResponse({ status: 200, description: 'Student updated successfully' })
+  @SwaggerResponse({ status: 404, description: 'Student not found' })
   async update(
     @Param('id') id: string,
     @Body(ValidationPipe) updateStudentDto: UpdateStudentDto,
@@ -92,6 +139,10 @@ export class StudentController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete student by ID' })
+  @ApiParam({ name: 'id', description: 'Student ID' })
+  @SwaggerResponse({ status: 200, description: 'Student deleted successfully' })
+  @SwaggerResponse({ status: 404, description: 'Student not found' })
   async remove(@Param('id') id: string): Promise<ApiResponse> {
     return this.studentService.remove(id);
   }

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, CourseType, Gender, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -17,7 +17,7 @@ async function main() {
       password: hashedPassword,
       name: 'System Administrator',
       phone: '+9265072377',
-      role: 'ADMIN',
+      role: UserRole.ADMIN,
       isActive: true,
     },
   });
@@ -28,42 +28,42 @@ async function main() {
   const courses = [
     {
       name: 'Bachelor of Computer Applications',
-      type: 'BCA',
+      type: CourseType.BCA,
       duration: 3,
       description:
         'A 3-year undergraduate program in computer applications covering programming, database management, and software development.',
     },
     {
       name: 'Master of Computer Applications',
-      type: 'MCA',
+      type: CourseType.MCA,
       duration: 2,
       description:
         'A 2-year postgraduate program in computer applications with advanced topics in software engineering and system design.',
     },
     {
       name: 'Bachelor of Business Administration',
-      type: 'BBA',
+      type: CourseType.BBA,
       duration: 3,
       description:
         'A 3-year undergraduate program in business administration covering management, marketing, and finance.',
     },
     {
       name: 'Master of Business Administration',
-      type: 'MBA',
+      type: CourseType.MBA,
       duration: 2,
       description:
         'A 2-year postgraduate program in business administration with specializations in various business domains.',
     },
     {
       name: 'Bachelor of Commerce',
-      type: 'BCOM',
+      type: CourseType.BCOM,
       duration: 3,
       description:
         'A 3-year undergraduate program in commerce covering accounting, economics, and business studies.',
     },
     {
       name: 'Master of Commerce',
-      type: 'MCOM',
+      type: CourseType.MCOM,
       duration: 2,
       description:
         'A 2-year postgraduate program in commerce with advanced topics in accounting and business management.',
@@ -72,16 +72,20 @@ async function main() {
 
   for (const courseData of courses) {
     const course = await prisma.course.upsert({
-      where: { type: courseData.type as any },
+      where: { type: courseData.type },
       update: {},
-      create: courseData as any,
+      create: courseData,
     });
     console.log(`✅ Created course: ${course.name} (${course.type})`);
   }
 
   // Create sample students
-  const bcaCourse = await prisma.course.findUnique({ where: { type: 'BCA' } });
-  const mcaCourse = await prisma.course.findUnique({ where: { type: 'MCA' } });
+  const bcaCourse = await prisma.course.findUnique({
+    where: { type: CourseType.BCA },
+  });
+  const mcaCourse = await prisma.course.findUnique({
+    where: { type: CourseType.MCA },
+  });
 
   if (bcaCourse && mcaCourse) {
     const sampleStudents = [
@@ -90,7 +94,7 @@ async function main() {
         email: 'rahul.sharma@student.com',
         phone: '+919876543210',
         age: 20,
-        gender: 'MALE',
+        gender: Gender.MALE,
         address: '123 Main Street, Mumbai, Maharashtra, India',
         admissionYear: 2024,
         passoutYear: 2027,
@@ -102,7 +106,7 @@ async function main() {
         email: 'priya.patel@student.com',
         phone: '+919876543211',
         age: 19,
-        gender: 'FEMALE',
+        gender: Gender.FEMALE,
         address: '456 Park Avenue, Delhi, India',
         admissionYear: 2024,
         passoutYear: 2027,
@@ -114,7 +118,7 @@ async function main() {
         email: 'amit.kumar@student.com',
         phone: '+919876543212',
         age: 22,
-        gender: 'MALE',
+        gender: Gender.MALE,
         address: '789 Garden Road, Bangalore, Karnataka, India',
         admissionYear: 2024,
         passoutYear: 2026,
@@ -156,7 +160,7 @@ async function main() {
         data: {
           ...student,
           enrollmentNumber,
-        } as any,
+        },
       });
 
       console.log(
@@ -169,10 +173,13 @@ async function main() {
 }
 
 main()
+  .then(() => {
+    console.log('🎉 Database seeding completed successfully!');
+  })
   .catch((e) => {
     console.error('❌ Error during seeding:', e);
     process.exit(1);
   })
-  .finally(async () => {
-    await prisma.$disconnect();
+  .finally(() => {
+    void prisma.$disconnect();
   });

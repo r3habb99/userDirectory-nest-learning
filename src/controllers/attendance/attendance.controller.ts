@@ -14,6 +14,8 @@ import {
   ApiOperation,
   ApiResponse as SwaggerResponse,
   ApiBearerAuth,
+  ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 import { AttendanceService } from '../../services/attendance/attendance.service';
 import { CreateAttendanceDto } from '../../dto/attendance/create-attendance.dto';
@@ -67,6 +69,13 @@ export class AttendanceController {
   }
 
   @Get()
+  @ApiOperation({
+    summary: 'Get all attendance records with pagination and filters',
+  })
+  @SwaggerResponse({
+    status: 200,
+    description: 'Attendance records retrieved successfully',
+  })
   async findAll(
     @Query(ValidationPipe) filters: AttendanceFiltersDto,
   ): Promise<PaginatedResponse> {
@@ -74,6 +83,31 @@ export class AttendanceController {
   }
 
   @Get('statistics')
+  @ApiOperation({ summary: 'Get attendance statistics' })
+  @ApiQuery({
+    name: 'studentId',
+    required: false,
+    description: 'Filter by student ID',
+  })
+  @ApiQuery({
+    name: 'courseId',
+    required: false,
+    description: 'Filter by course ID',
+  })
+  @ApiQuery({
+    name: 'dateFrom',
+    required: false,
+    description: 'Start date (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'dateTo',
+    required: false,
+    description: 'End date (YYYY-MM-DD)',
+  })
+  @SwaggerResponse({
+    status: 200,
+    description: 'Attendance statistics retrieved successfully',
+  })
   async getStatistics(
     @Query('studentId') studentId?: string,
     @Query('courseId') courseId?: string,
@@ -89,6 +123,23 @@ export class AttendanceController {
   }
 
   @Get('student/:studentId/report')
+  @ApiOperation({ summary: 'Get attendance report for a specific student' })
+  @ApiParam({ name: 'studentId', description: 'Student ID' })
+  @ApiQuery({
+    name: 'dateFrom',
+    required: false,
+    description: 'Start date (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'dateTo',
+    required: false,
+    description: 'End date (YYYY-MM-DD)',
+  })
+  @SwaggerResponse({
+    status: 200,
+    description: 'Student attendance report retrieved successfully',
+  })
+  @SwaggerResponse({ status: 404, description: 'Student not found' })
   async getStudentReport(
     @Param('studentId') studentId: string,
     @Query('dateFrom') dateFrom?: string,

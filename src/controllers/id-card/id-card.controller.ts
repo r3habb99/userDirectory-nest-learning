@@ -14,6 +14,8 @@ import {
   ApiOperation,
   ApiResponse as SwaggerResponse,
   ApiBearerAuth,
+  ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 import { IdCardService } from '../../services/id-card/id-card.service';
 import { CreateIdCardDto } from '../../dto/id-card/create-id-card.dto';
@@ -48,6 +50,24 @@ export class IdCardController {
 
   @Get()
   @ApiOperation({ summary: 'Get all ID cards with pagination' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page (default: 10)',
+  })
+  @ApiQuery({
+    name: 'isActive',
+    required: false,
+    type: Boolean,
+    description: 'Filter by active status',
+  })
   @SwaggerResponse({
     status: 200,
     description: 'ID cards retrieved successfully',
@@ -65,6 +85,13 @@ export class IdCardController {
   }
 
   @Get('student/:studentId')
+  @ApiOperation({ summary: 'Get ID card by student ID' })
+  @ApiParam({ name: 'studentId', description: 'Student ID' })
+  @SwaggerResponse({
+    status: 200,
+    description: 'ID card retrieved successfully',
+  })
+  @SwaggerResponse({ status: 404, description: 'ID card not found' })
   async findByStudentId(
     @Param('studentId') studentId: string,
   ): Promise<ApiResponse> {
@@ -72,11 +99,25 @@ export class IdCardController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get ID card by ID' })
+  @ApiParam({ name: 'id', description: 'ID card ID' })
+  @SwaggerResponse({
+    status: 200,
+    description: 'ID card retrieved successfully',
+  })
+  @SwaggerResponse({ status: 404, description: 'ID card not found' })
   async findOne(@Param('id') id: string): Promise<ApiResponse> {
     return this.idCardService.findOne(id);
   }
 
   @Patch(':id/deactivate')
+  @ApiOperation({ summary: 'Deactivate an ID card' })
+  @ApiParam({ name: 'id', description: 'ID card ID' })
+  @SwaggerResponse({
+    status: 200,
+    description: 'ID card deactivated successfully',
+  })
+  @SwaggerResponse({ status: 404, description: 'ID card not found' })
   async deactivateIdCard(@Param('id') id: string): Promise<ApiResponse> {
     return this.idCardService.deactivateIdCard(id);
   }
