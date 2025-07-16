@@ -10,6 +10,7 @@
 interface ApiConfig {
   baseURL: string;
   apiPrefix: string;
+  version: string;
   timeout?: number;
   headers?: Record<string, string>;
   frontendURL?: string;
@@ -62,19 +63,23 @@ const API_CONFIG: Record<string, ApiConfig> = {
   development: {
     baseURL: 'http://localhost:3000',
     apiPrefix: '/api/v1',
+    version: 'v1',
     frontendURL: 'http://localhost:3001',
     timeout: 10000,
     headers: {
       'Content-Type': 'application/json',
+      'X-API-Version': 'v1',
     },
   },
   production: {
     baseURL: 'https://your-college-api-domain.com',
     apiPrefix: '/api/v1',
+    version: 'v1',
     frontendURL: 'https://your-college-frontend-domain.com',
     timeout: 15000,
     headers: {
       'Content-Type': 'application/json',
+      'X-API-Version': 'v1',
     },
   },
 };
@@ -141,6 +146,72 @@ function buildDynamicUrl(
 ): string {
   const endpoint = endpointFunction(id);
   return buildApiUrl(endpoint);
+}
+
+// Enhanced request headers with API versioning and tracking
+function getRequestHeaders(includeAuth: boolean = true): HeadersInit {
+  const config = getApiConfig();
+  const headers: HeadersInit = {
+    ...config.headers,
+    'X-Request-ID': `req_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+  };
+
+  if (includeAuth) {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+
+  return headers;
+}
+
+// Enhanced fetch wrapper with error handling and retries
+async function apiRequest<T = any>(
+  url: string,
+  options: RequestInit = {},
+  retries: number = 3,
+): Promise<ApiResponse<T>> {
+  const config = getApiConfig();
+
+  const requestOptions: RequestInit = {
+    ...options,
+    headers: {
+      ...getRequestHeaders(),
+      ...options.headers,
+    },
+    signal: AbortSignal.timeout(config.timeout || 10000),
+  };
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, requestOptions);
+
+      // Log response headers for debugging
+      console.log('Response Headers:', {
+        'X-API-Version': response.headers.get('X-API-Version'),
+        'X-Request-ID': response.headers.get('X-Request-ID'),
+        'X-Response-Time': response.headers.get('X-Response-Time'),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      if (attempt === retries) {
+        throw error;
+      }
+
+      // Wait before retry (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+    }
+  }
+
+  throw new Error('Max retries exceeded');
 }
 
 // API Response Types - Matching your NestJS API response structure

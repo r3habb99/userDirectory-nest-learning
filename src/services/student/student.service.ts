@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EnrollmentService } from '../enrollment/enrollment.service';
 import { CreateStudentDto } from '../../dto/student/create-student.dto';
@@ -11,6 +11,10 @@ import {
 } from '../../common/exceptions/custom.exceptions';
 import { ResponseUtils } from '../../common/utils/response.utils';
 import { EnrollmentUtils } from '../../common/utils/enrollment.utils';
+import { ValidationService } from '../../common/services/validation.service';
+import { AuditLogService } from '../../common/middleware/security.middleware';
+import { QueryOptimizerService } from '../../common/services/query-optimizer.service';
+import { CacheService } from '../../common/services/cache.service';
 import {
   ApiResponse,
   PaginatedResponse,
@@ -23,6 +27,10 @@ export class StudentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly enrollmentService: EnrollmentService,
+    private readonly validationService: ValidationService,
+    private readonly auditLogService: AuditLogService,
+    private readonly queryOptimizer: QueryOptimizerService,
+    private readonly cache: CacheService,
   ) {}
 
   /**
@@ -105,89 +113,28 @@ export class StudentService {
   }
 
   /**
-   * Get all students with filtering and pagination
+   * Get all students with filtering and pagination (optimized)
    */
   async findAll(filters: StudentFiltersDto): Promise<PaginatedResponse> {
     try {
-      const {
-        course,
-        admissionYear,
-        isActive,
-        search,
-        page = 1,
-        limit = 10,
-        sortBy = 'createdAt',
-        sortOrder = 'desc',
-      } = filters;
-
-      const skip = (page - 1) * limit;
-
-      // Build where clause
-      const where: {
-        course?: { type: any };
-        admissionYear?: number;
-        isActive?: boolean;
-        OR?: Array<{
-          name?: { contains: string; mode: 'insensitive' };
-          email?: { contains: string; mode: 'insensitive' };
-          enrollmentNumber?: { contains: string; mode: 'insensitive' };
-          phone?: { contains: string; mode: 'insensitive' };
-        }>;
-      } = {};
-
-      if (course) {
-        where.course = { type: course };
-      }
-
-      if (admissionYear) {
-        where.admissionYear = admissionYear;
-      }
-
-      if (isActive !== undefined) {
-        where.isActive = isActive;
-      }
-
-      if (search) {
-        where.OR = [
-          { name: { contains: search, mode: 'insensitive' } },
-          { enrollmentNumber: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } },
-          { phone: { contains: search, mode: 'insensitive' } },
-        ];
-      }
-
-      const [students, total] = await Promise.all([
-        this.prisma.student.findMany({
-          where,
-          skip,
-          take: limit,
-          orderBy: { [sortBy]: sortOrder },
-          include: {
-            course: {
-              select: {
-                id: true,
-                name: true,
-                type: true,
-                duration: true,
-              },
-            },
-            admin: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-        }),
-        this.prisma.student.count({ where }),
-      ]);
+      // Use query optimizer for better performance
+      const result = await this.queryOptimizer.findStudentsOptimized({
+        course: filters.course,
+        admissionYear: filters.admissionYear,
+        isActive: filters.isActive,
+        search: filters.search,
+        page: filters.page || 1,
+        limit: filters.limit || 10,
+        sortBy: filters.sortBy || 'createdAt',
+        sortOrder: filters.sortOrder || 'desc',
+        includeRelations: true,
+      });
 
       return ResponseUtils.paginated(
-        students,
-        page,
-        limit,
-        total,
+        result.students,
+        result.page,
+        result.limit,
+        result.total,
         'Students retrieved successfully',
       );
     } catch (error) {
@@ -417,31 +364,18 @@ export class StudentService {
   }
 
   /**
-   * Get student statistics
+   * Get student statistics (optimized with caching)
    */
   async getStatistics(): Promise<ApiResponse> {
     try {
-      const [totalStudents, activeStudents, courseStats, yearStats] =
-        await Promise.all([
-          this.prisma.student.count(),
-          this.prisma.student.count({ where: { isActive: true } }),
-          this.prisma.student.groupBy({
-            by: ['courseId'],
-            _count: { id: true },
-            where: { isActive: true },
-          }),
-          this.prisma.student.groupBy({
-            by: ['admissionYear'],
-            _count: { id: true },
-            where: { isActive: true },
-            orderBy: { admissionYear: 'desc' },
-          }),
-        ]);
+      // Use query optimizer with aggressive caching for statistics
+      const stats =
+        await this.queryOptimizer.getStatisticsOptimized('students');
 
       // Get course details for course stats
       const courseDetails = await this.prisma.course.findMany({
         where: {
-          id: { in: courseStats.map((stat) => stat.courseId) },
+          id: { in: stats.courseStats.map((stat) => stat.courseId) },
         },
         select: {
           id: true,
@@ -450,22 +384,22 @@ export class StudentService {
         },
       });
 
-      const enrichedCourseStats = courseStats.map((stat) => {
+      const enrichedCourseStats = stats.courseStats.map((stat) => {
         const course = courseDetails.find((c) => c.id === stat.courseId);
         return {
           courseId: stat.courseId,
-          courseName: course?.name,
-          courseType: course?.type,
+          courseName: course?.name || 'Unknown',
+          courseType: course?.type || 'Unknown',
           studentCount: stat._count.id,
         };
       });
 
       const result = {
-        totalStudents,
-        activeStudents,
-        inactiveStudents: totalStudents - activeStudents,
+        totalStudents: stats.totalStudents,
+        activeStudents: stats.activeStudents,
+        inactiveStudents: stats.totalStudents - stats.activeStudents,
         courseStats: enrichedCourseStats,
-        yearStats: yearStats.map((stat) => ({
+        yearStats: stats.yearStats.map((stat) => ({
           admissionYear: stat.admissionYear,
           studentCount: stat._count.id,
         })),

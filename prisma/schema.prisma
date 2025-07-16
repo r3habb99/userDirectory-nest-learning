@@ -3,11 +3,15 @@
 
 generator client {
   provider = "prisma-client-js"
+  // Enable query optimization features
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
 }
 
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
+  // Enable connection pooling and optimization
+  relationMode = "prisma"
 }
 
 // Enum definitions
@@ -102,9 +106,20 @@ model Student {
   attendanceRecords AttendanceRecord[]
   idCards           IdCard[]
 
+  // Optimized indexes for common query patterns
   @@index([enrollmentNumber])
   @@index([courseId])
   @@index([admissionYear])
+  @@index([courseId, admissionYear])
+  @@index([isActive, courseId])
+  @@index([email])
+  @@index([name]) // For name-based searches
+  @@index([phone]) // For phone-based searches
+  @@index([createdBy]) // For admin-based queries
+  @@index([isActive, admissionYear]) // For active students by year
+  @@index([courseId, isActive, admissionYear]) // Composite for complex filters
+  @@index([createdAt]) // For chronological queries
+  @@fulltext([name, email]) // Full-text search on name and email
   @@map("students")
 }
 
@@ -125,9 +140,15 @@ model AttendanceRecord {
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   admin   Admin   @relation("AdminAttendanceRecords", fields: [markedBy], references: [id])
 
+  // Optimized indexes for attendance queries
   @@unique([studentId, date])
   @@index([date])
   @@index([studentId])
+  @@index([status]) // For status-based filtering
+  @@index([markedBy]) // For admin-based queries
+  @@index([date, status]) // For date and status filtering
+  @@index([studentId, date, status]) // Composite for student attendance reports
+  @@index([createdAt]) // For chronological queries
   @@map("attendance_records")
 }
 
@@ -149,19 +170,26 @@ model IdCard {
   // Relations
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
+  // Optimized indexes for ID card queries
   @@index([studentId])
+  @@index([cardNumber])
+  @@index([isActive])
+  @@index([studentId, isActive]) // For active cards by student
+  @@index([expiryDate]) // For expiry tracking
+  @@index([issueDate]) // For chronological queries
   @@map("id_cards")
 }
 
 // Enrollment Counter model for generating unique enrollment numbers
 model EnrollmentCounter {
   id           String     @id @default(cuid())
-  courseType   CourseType @unique
+  courseType   CourseType
   year         Int
   lastNumber   Int        @default(0)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
   @@unique([courseType, year])
+  @@index([courseType, year])
   @@map("enrollment_counters")
 }

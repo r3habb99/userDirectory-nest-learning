@@ -13,11 +13,34 @@ export const API_CONFIG = {
   /** API version */
   VERSION: '1.0',
 
+  /** API version number for headers */
+  VERSION_HEADER: 'X-API-Version',
+
   /** Default port */
   DEFAULT_PORT: 3000,
 
   /** Default frontend URL */
   DEFAULT_FRONTEND_URL: 'http://localhost:3001',
+
+  /** API rate limiting */
+  RATE_LIMIT: {
+    TTL: 60, // Time window in seconds
+    LIMIT: 100, // Max requests per window
+  },
+
+  /** API pagination defaults */
+  PAGINATION: {
+    DEFAULT_PAGE: 1,
+    DEFAULT_LIMIT: 10,
+    MAX_LIMIT: 100,
+  },
+
+  /** API response formats */
+  RESPONSE_FORMATS: {
+    JSON: 'application/json',
+    XML: 'application/xml',
+    CSV: 'text/csv',
+  },
 } as const;
 
 /**
@@ -114,4 +137,48 @@ export const DOCS_CONFIG = {
     name: 'MIT',
     url: 'https://opensource.org/licenses/MIT',
   },
+  SERVERS: [
+    {
+      url: 'http://localhost:3000/api/v1',
+      description: 'Development server',
+    },
+    {
+      url: 'https://api.college-directory.example.com/api/v1',
+      description: 'Production server',
+    },
+  ],
+  TAGS: [
+    {
+      name: 'System',
+      description: 'System health and information endpoints',
+    },
+    {
+      name: 'Authentication',
+      description: 'Admin authentication and authorization endpoints',
+    },
+    {
+      name: 'Students',
+      description: 'Student management and information endpoints',
+    },
+    {
+      name: 'Courses',
+      description: 'Course management and information endpoints',
+    },
+    {
+      name: 'Attendance',
+      description: 'Attendance tracking and reporting endpoints',
+    },
+    {
+      name: 'ID Cards',
+      description: 'ID card generation and management endpoints',
+    },
+    {
+      name: 'Admin Management',
+      description: 'Admin user management endpoints',
+    },
+    {
+      name: 'File Upload',
+      description: 'File upload and management endpoints',
+    },
+  ],
 } as const;

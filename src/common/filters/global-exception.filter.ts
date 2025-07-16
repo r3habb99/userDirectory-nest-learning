@@ -5,10 +5,12 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  BadRequestException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
 import { ApiResponse } from '../interfaces/api-response.interface';
+import { ValidationError } from 'class-validator';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -22,28 +24,56 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
     let error = 'INTERNAL_SERVER_ERROR';
+    let details: any = undefined;
 
+    // Handle validation errors from class-validator
+    if (exception instanceof BadRequestException) {
+      const validationError = this.handleValidationError(exception);
+      status = validationError.status;
+      message = validationError.message;
+      error = validationError.error;
+      details = validationError.details;
+    }
     // Handle HTTP exceptions
-    if (exception instanceof HttpException) {
+    else if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
       if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
         const responseObj = exceptionResponse as {
-          message?: string;
+          message?: string | string[];
           error?: string;
+          details?: any;
         };
-        message = responseObj.message || exception.message;
-        error = responseObj.error || 'HTTP_EXCEPTION';
+
+        // Handle array of validation messages
+        if (Array.isArray(responseObj.message)) {
+          message = 'Validation failed';
+          details = responseObj.message;
+          error = 'VALIDATION_ERROR';
+        } else {
+          message = responseObj.message || exception.message;
+          error = responseObj.error || 'HTTP_EXCEPTION';
+          details = responseObj.details;
+        }
       } else {
         message = String(exceptionResponse);
       }
     }
-    // Handle Prisma errors
+    // Handle Prisma validation errors
+    else if (exception instanceof PrismaClientValidationError) {
+      const prismaValidationError = this.handlePrismaValidationError(exception);
+      status = prismaValidationError.status;
+      message = prismaValidationError.message;
+      error = prismaValidationError.error;
+      details = prismaValidationError.details;
+    }
+    // Handle Prisma known request errors
     else if (exception instanceof PrismaClientKnownRequestError) {
       const prismaError = this.handlePrismaError(exception);
       status = prismaError.status;
       message = prismaError.message;
       error = prismaError.error;
+      details = prismaError.details;
     }
     // Handle other errors
     else if (exception instanceof Error) {
@@ -59,21 +89,81 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message,
       error,
       statusCode: status,
+      ...(details && { details }),
     };
 
-    // Log the error
+    // Enhanced error logging with context
+    const logContext = {
+      method: request.method,
+      url: request.url,
+      userAgent: request.get('User-Agent'),
+      ip: request.ip,
+      timestamp: new Date().toISOString(),
+    };
+
     this.logger.error(
       `${request.method} ${request.url} - ${status} - ${message}`,
-      exception instanceof Error ? exception.stack : 'Unknown error',
+      {
+        exception: exception instanceof Error ? exception.stack : String(exception),
+        context: logContext,
+        details,
+      },
     );
 
     response.status(status).json(errorResponse);
+  }
+
+  /**
+   * Handle validation errors from class-validator
+   */
+  private handleValidationError(exception: BadRequestException): {
+    status: number;
+    message: string;
+    error: string;
+    details?: any;
+  } {
+    const response = exception.getResponse() as any;
+
+    if (response && Array.isArray(response.message)) {
+      return {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Validation failed',
+        error: 'VALIDATION_ERROR',
+        details: response.message,
+      };
+    }
+
+    return {
+      status: HttpStatus.BAD_REQUEST,
+      message: response?.message || 'Validation failed',
+      error: 'VALIDATION_ERROR',
+    };
+  }
+
+  /**
+   * Handle Prisma validation errors
+   */
+  private handlePrismaValidationError(error: PrismaClientValidationError): {
+    status: number;
+    message: string;
+    error: string;
+    details?: any;
+  } {
+    return {
+      status: HttpStatus.BAD_REQUEST,
+      message: 'Invalid data provided to database',
+      error: 'DATABASE_VALIDATION_ERROR',
+      details: {
+        originalError: error.message,
+      },
+    };
   }
 
   private handlePrismaError(error: PrismaClientKnownRequestError): {
     status: number;
     message: string;
     error: string;
+    details?: any;
   } {
     switch (error.code) {
       case 'P2002': {
@@ -87,6 +177,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           status: HttpStatus.CONFLICT,
           message: `Duplicate entry for ${targetString}`,
           error: 'DUPLICATE_ENTRY',
+          details: {
+            field: targetString,
+            code: error.code,
+          },
         };
       }
       case 'P2025':
@@ -94,24 +188,69 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           status: HttpStatus.NOT_FOUND,
           message: 'Record not found',
           error: 'RECORD_NOT_FOUND',
+          details: {
+            code: error.code,
+            meta: error.meta,
+          },
         };
       case 'P2003':
         return {
           status: HttpStatus.BAD_REQUEST,
           message: 'Foreign key constraint failed',
           error: 'FOREIGN_KEY_CONSTRAINT',
+          details: {
+            field: error.meta?.field_name,
+            code: error.code,
+          },
         };
       case 'P2014':
         return {
           status: HttpStatus.BAD_REQUEST,
           message: 'Invalid ID provided',
           error: 'INVALID_ID',
+          details: {
+            code: error.code,
+          },
+        };
+      case 'P2021':
+        return {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Table does not exist',
+          error: 'TABLE_NOT_FOUND',
+          details: {
+            table: error.meta?.table,
+            code: error.code,
+          },
+        };
+      case 'P2022':
+        return {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Column does not exist',
+          error: 'COLUMN_NOT_FOUND',
+          details: {
+            column: error.meta?.column,
+            code: error.code,
+          },
+        };
+      case 'P2023':
+        return {
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Inconsistent column data',
+          error: 'INCONSISTENT_COLUMN_DATA',
+          details: {
+            message: error.meta?.message,
+            code: error.code,
+          },
         };
       default:
         return {
           status: HttpStatus.INTERNAL_SERVER_ERROR,
           message: 'Database error occurred',
           error: 'DATABASE_ERROR',
+          details: {
+            code: error.code,
+            meta: error.meta,
+          },
         };
     }
   }

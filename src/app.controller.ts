@@ -16,8 +16,8 @@ export class AppController {
     description: 'API is running properly',
     schema: {
       type: 'string',
-      example: 'College Student Directory API is running!'
-    }
+      example: 'College Student Directory API is running!',
+    },
   })
   getHello(): string {
     return this.appService.getHello();

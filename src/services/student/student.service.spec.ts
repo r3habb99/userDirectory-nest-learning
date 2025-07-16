@@ -1,10 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
 import { StudentService } from './student.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EnrollmentService } from '../enrollment/enrollment.service';
+import { ValidationService } from '../../common/services/validation.service';
 import { CreateStudentDto } from '../../dto/student/create-student.dto';
 import { UpdateStudentDto } from '../../dto/student/update-student.dto';
+import { StudentFiltersDto } from '../../dto/student/student-filters.dto';
+import {
+  MockDataFactory,
+  TestAssertions,
+} from '../../common/testing/test-utils';
 
 describe('StudentService', () => {
   let service: StudentService;

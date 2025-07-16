@@ -12,13 +12,21 @@ export class ResponseUtils {
     data: T,
     message = 'Operation successful',
     statusCode = HttpStatus.OK,
+    meta?: any,
   ): ApiResponse<T> {
-    return {
+    const response: ApiResponse<T> = {
       success: true,
       message,
       data,
       statusCode,
+      timestamp: new Date().toISOString(),
     };
+
+    if (meta) {
+      response.meta = meta;
+    }
+
+    return response;
   }
 
   /**
@@ -28,12 +36,15 @@ export class ResponseUtils {
     message: string,
     error?: string,
     statusCode = HttpStatus.INTERNAL_SERVER_ERROR,
+    details?: any,
   ): ApiResponse {
     return {
       success: false,
       message,
       error,
       statusCode,
+      timestamp: new Date().toISOString(),
+      details,
     };
   }
 

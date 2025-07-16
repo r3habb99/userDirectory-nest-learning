@@ -68,16 +68,23 @@ async function bootstrap() {
         in: 'header',
       },
       'JWT-auth',
-    )
-    .addTag('Authentication', 'Admin authentication endpoints')
-    .addTag('Students', 'Student management endpoints')
-    .addTag('Courses', 'Course management endpoints')
-    .addTag('Attendance', 'Attendance management endpoints')
-    .addTag('ID Cards', 'ID card generation and management endpoints')
-    .addTag('Admin Management', 'Admin user management endpoints')
-    .build();
+    );
 
-  const document = SwaggerModule.createDocument(app, config, {
+  // Add additional servers from config
+  DOCS_CONFIG.SERVERS.forEach(server => {
+    if (server.url !== `http://localhost:${port}/api/v1`) {
+      config.addServer(server.url, server.description);
+    }
+  });
+
+  // Add tags with descriptions
+  DOCS_CONFIG.TAGS.forEach(tag => {
+    config.addTag(tag.name, tag.description);
+  });
+
+  const swaggerConfig = config.build();
+
+  const document = SwaggerModule.createDocument(app, swaggerConfig, {
     deepScanRoutes: true,
     operationIdFactory: (_controllerKey: string, methodKey: string) =>
       methodKey,

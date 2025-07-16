@@ -19,6 +19,13 @@ import {
   ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
+import {
+  ApiStandardResponses,
+  ApiPaginationQuery,
+  ApiSortingQuery,
+  ApiSearchQuery,
+  ApiVersionHeader,
+} from '../../common/decorators/swagger.decorators';
 import { StudentService } from '../../services/student/student.service';
 import { CreateStudentDto } from '../../dto/student/create-student.dto';
 import { UpdateStudentDto } from '../../dto/student/update-student.dto';
@@ -34,6 +41,7 @@ import {
 @Controller('students')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
+@ApiVersionHeader()
 export class StudentController {
   constructor(private readonly studentService: StudentService) {}
 
@@ -55,6 +63,9 @@ export class StudentController {
     status: 200,
     description: 'Students retrieved successfully',
   })
+  @ApiPaginationQuery()
+  @ApiSortingQuery(['name', 'enrollmentNumber', 'course', 'admissionYear', 'createdAt'])
+  @ApiStandardResponses()
   async findAll(
     @Query(ValidationPipe) filters: StudentFiltersDto,
   ): Promise<PaginatedResponse> {
@@ -75,16 +86,13 @@ export class StudentController {
   @ApiOperation({
     summary: 'Search students by name, email, or enrollment number',
   })
-  @ApiQuery({
-    name: 'q',
-    description: 'Search query (minimum 2 characters)',
-    example: 'John',
-  })
+  @ApiSearchQuery(['name', 'email', 'enrollmentNumber', 'phone'])
   @SwaggerResponse({
     status: 200,
     description: 'Search results retrieved successfully',
   })
   @SwaggerResponse({ status: 400, description: 'Search query too short' })
+  @ApiStandardResponses()
   async search(@Query('q') query: string): Promise<ApiResponse> {
     if (!query || query.trim().length < 2) {
       return {
