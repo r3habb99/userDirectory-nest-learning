@@ -1,6 +1,16 @@
 import { registerAs } from '@nestjs/config';
-import { IsString, IsNumber, IsBoolean, IsOptional, IsEnum, IsUrl, IsEmail, validateSync, IsArray } from 'class-validator';
-import { plainToClass, Transform, Type } from 'class-transformer';
+import {
+  IsString,
+  IsNumber,
+  IsBoolean,
+  IsOptional,
+  IsEnum,
+  IsUrl,
+  IsEmail,
+  validateSync,
+  IsArray,
+} from 'class-validator';
+import { plainToClass, Transform } from 'class-transformer';
 
 /**
  * Enhanced Environment Configuration Management
@@ -44,11 +54,11 @@ export enum FileStorageProvider {
  */
 export class EnvironmentConfig {
   @IsEnum(Environment)
-  @Transform(({ value }) => value || Environment.DEVELOPMENT)
+  @Transform(({ value }: { value: string }) => value || Environment.DEVELOPMENT)
   NODE_ENV: Environment = Environment.DEVELOPMENT;
 
   @IsNumber()
-  @Transform(({ value }) => parseInt(value, 10) || 3000)
+  @Transform(({ value }: { value: string }) => parseInt(value, 10) || 3000)
   PORT: number = 3000;
 
   @IsString()
@@ -69,27 +79,27 @@ export class EnvironmentConfig {
 
   @IsEnum(DatabaseProvider)
   @IsOptional()
-  @Transform(({ value }) => value || DatabaseProvider.MYSQL)
+  @Transform(({ value }: { value: string }) => value || DatabaseProvider.MYSQL)
   DATABASE_PROVIDER?: DatabaseProvider = DatabaseProvider.MYSQL;
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10) || 10)
+  @Transform(({ value }: { value: string }) => parseInt(value, 10) || 10)
   DB_CONNECTION_LIMIT?: number = 10;
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10) || 60000)
+  @Transform(({ value }: { value: string }) => parseInt(value, 10) || 60000)
   DB_ACQUIRE_TIMEOUT?: number = 60000;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }: { value: string }) => value === 'true')
   DB_ENABLE_LOGGING?: boolean = false;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }: { value: string }) => value === 'true')
   DB_SSL?: boolean = false;
 
   // Authentication Configuration
@@ -110,34 +120,36 @@ export class EnvironmentConfig {
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10) || 12)
+  @Transform(({ value }: { value: string }) => parseInt(value, 10) || 12)
   BCRYPT_ROUNDS?: number = 12;
 
   // Security Configuration
   @IsArray()
   @IsOptional()
-  @Transform(({ value }) => value ? value.split(',').map((s: string) => s.trim()) : ['*'])
+  @Transform(({ value }: { value: string }) =>
+    value ? value.split(',').map((s: string) => s.trim()) : ['*'],
+  )
   CORS_ORIGINS?: string[] = ['*'];
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10) || 100)
+  @Transform(({ value }: { value: string }) => parseInt(value, 10) || 100)
   RATE_LIMIT_MAX?: number = 100;
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10) || 900000)
+  @Transform(({ value }: { value: string }) => parseInt(value, 10) || 900000)
   RATE_LIMIT_WINDOW_MS?: number = 900000;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }: { value: string }) => value === 'true')
   HELMET_ENABLED?: boolean = true;
 
   // Cache Configuration
   @IsEnum(CacheProvider)
   @IsOptional()
-  @Transform(({ value }) => value || CacheProvider.MEMORY)
+  @Transform(({ value }: { value: string }) => value || CacheProvider.MEMORY)
   CACHE_PROVIDER?: CacheProvider = CacheProvider.MEMORY;
 
   @IsString()
@@ -146,18 +158,20 @@ export class EnvironmentConfig {
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10) || 300)
+  @Transform(({ value }: { value: string }) => parseInt(value, 10) || 300)
   CACHE_TTL?: number = 300;
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10) || 1000)
+  @Transform(({ value }: { value: string }) => parseInt(value, 10) || 1000)
   CACHE_MAX_SIZE?: number = 1000;
 
   // File Storage Configuration
   @IsEnum(FileStorageProvider)
   @IsOptional()
-  @Transform(({ value }) => value || FileStorageProvider.LOCAL)
+  @Transform(
+    ({ value }: { value: string }) => value || FileStorageProvider.LOCAL,
+  )
   FILE_STORAGE_PROVIDER?: FileStorageProvider = FileStorageProvider.LOCAL;
 
   @IsString()
@@ -166,13 +180,21 @@ export class EnvironmentConfig {
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10) || 10485760)
+  @Transform(({ value }: { value: string }) => parseInt(value, 10) || 10485760)
   UPLOAD_MAX_FILE_SIZE?: number = 10485760; // 10MB
 
   @IsArray()
   @IsOptional()
-  @Transform(({ value }) => value ? value.split(',').map((s: string) => s.trim()) : ['image/jpeg', 'image/png', 'image/webp'])
-  UPLOAD_ALLOWED_MIME_TYPES?: string[] = ['image/jpeg', 'image/png', 'image/webp'];
+  @Transform(({ value }: { value: string }) =>
+    value
+      ? value.split(',').map((s: string) => s.trim())
+      : ['image/jpeg', 'image/png', 'image/webp'],
+  )
+  UPLOAD_ALLOWED_MIME_TYPES?: string[] = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  ];
 
   // AWS S3 Configuration (if using S3)
   @IsString()
@@ -194,12 +216,12 @@ export class EnvironmentConfig {
   // Logging Configuration
   @IsEnum(LogLevel)
   @IsOptional()
-  @Transform(({ value }) => value || LogLevel.INFO)
+  @Transform(({ value }: { value: string }) => value || LogLevel.INFO)
   LOG_LEVEL?: LogLevel = LogLevel.INFO;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }: { value: string }) => value === 'true')
   LOG_ENABLE_FILE?: boolean = false;
 
   @IsString()
@@ -208,7 +230,7 @@ export class EnvironmentConfig {
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }: { value: string }) => value === 'true')
   LOG_ENABLE_CONSOLE?: boolean = true;
 
   // Email Configuration
@@ -218,12 +240,12 @@ export class EnvironmentConfig {
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10) || 587)
+  @Transform(({ value }: { value: string }) => parseInt(value, 10) || 587)
   EMAIL_PORT?: number = 587;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }: { value: string }) => value === 'true')
   EMAIL_SECURE?: boolean = false;
 
   @IsString()
@@ -241,38 +263,38 @@ export class EnvironmentConfig {
   // Feature Flags
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value !== 'false')
+  @Transform(({ value }: { value: string }) => value !== 'false')
   ENABLE_SWAGGER?: boolean = true;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }: { value: string }) => value === 'true')
   ENABLE_METRICS?: boolean = false;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value !== 'false')
+  @Transform(({ value }: { value: string }) => value !== 'false')
   ENABLE_AUDIT_LOG?: boolean = true;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }: { value: string }) => value === 'true')
   ENABLE_SEED_DATA?: boolean = false;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }: { value: string }) => value === 'true')
   ENABLE_DEBUG_ROUTES?: boolean = false;
 
   // Application Limits
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10) || 300)
+  @Transform(({ value }: { value: string }) => parseInt(value, 10) || 300)
   MAX_STUDENTS_PER_COURSE?: number = 300;
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10) || 1000)
+  @Transform(({ value }: { value: string }) => parseInt(value, 10) || 1000)
   MAX_COURSES_PER_ADMIN?: number = 1000;
 
   // Monitoring Configuration
@@ -286,13 +308,13 @@ export class EnvironmentConfig {
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }: { value: string }) => value === 'true')
   ENABLE_HEALTH_CHECKS?: boolean = true;
 
   // Development/Testing Configuration
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }: { value: string }) => value === 'true')
   ENABLE_MOCK_DATA?: boolean = false;
 
   @IsString()
@@ -301,7 +323,7 @@ export class EnvironmentConfig {
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10) || 30000)
+  @Transform(({ value }: { value: string }) => parseInt(value, 10) || 30000)
   TEST_TIMEOUT?: number = 30000;
 }
 
@@ -320,11 +342,13 @@ export function validateEnvironmentConfig(): EnvironmentConfig {
   });
 
   if (errors.length > 0) {
-    const errorMessages = errors.map(error => 
-      Object.values(error.constraints || {}).join(', ')
-    ).join('; ');
-    
-    throw new Error(`Environment configuration validation failed: ${errorMessages}`);
+    const errorMessages = errors
+      .map((error) => Object.values(error.constraints || {}).join(', '))
+      .join('; ');
+
+    throw new Error(
+      `Environment configuration validation failed: ${errorMessages}`,
+    );
   }
 
   // Additional custom validations
@@ -344,15 +368,21 @@ function validateCustomRules(config: EnvironmentConfig): void {
     }
 
     if (config.JWT_SECRET.length < 32) {
-      throw new Error('JWT_SECRET must be at least 32 characters long in production');
+      throw new Error(
+        'JWT_SECRET must be at least 32 characters long in production',
+      );
     }
 
     if (!config.DATABASE_URL.includes('ssl=true') && !config.DB_SSL) {
-      console.warn('Warning: SSL is not enabled for database connection in production');
+      console.warn(
+        'Warning: SSL is not enabled for database connection in production',
+      );
     }
 
     if (config.CORS_ORIGINS?.includes('*')) {
-      throw new Error('CORS origins must be explicitly set in production (no wildcards)');
+      throw new Error(
+        'CORS origins must be explicitly set in production (no wildcards)',
+      );
     }
 
     if (config.ENABLE_DEBUG_ROUTES) {
@@ -371,17 +401,28 @@ function validateCustomRules(config: EnvironmentConfig): void {
 
   // File storage validations
   if (config.FILE_STORAGE_PROVIDER === FileStorageProvider.AWS_S3) {
-    const requiredS3Vars = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION', 'AWS_S3_BUCKET'];
-    const missingS3Vars = requiredS3Vars.filter(varName => !config[varName as keyof EnvironmentConfig]);
-    
+    const requiredS3Vars = [
+      'AWS_ACCESS_KEY_ID',
+      'AWS_SECRET_ACCESS_KEY',
+      'AWS_REGION',
+      'AWS_S3_BUCKET',
+    ];
+    const missingS3Vars = requiredS3Vars.filter(
+      (varName) => !config[varName as keyof EnvironmentConfig],
+    );
+
     if (missingS3Vars.length > 0) {
-      throw new Error(`Missing required S3 configuration: ${missingS3Vars.join(', ')}`);
+      throw new Error(
+        `Missing required S3 configuration: ${missingS3Vars.join(', ')}`,
+      );
     }
   }
 
   // Email configuration validation
   if (config.EMAIL_HOST && (!config.EMAIL_USER || !config.EMAIL_PASSWORD)) {
-    console.warn('Warning: Email host is configured but credentials are missing');
+    console.warn(
+      'Warning: Email host is configured but credentials are missing',
+    );
   }
 }
 
@@ -395,7 +436,9 @@ export const environmentConfig = registerAs('environment', () => {
 /**
  * Get environment-specific defaults
  */
-export function getEnvironmentDefaults(env: Environment): Partial<EnvironmentConfig> {
+export function getEnvironmentDefaults(
+  env: Environment,
+): Partial<EnvironmentConfig> {
   const defaults: Record<Environment, Partial<EnvironmentConfig>> = {
     [Environment.DEVELOPMENT]: {
       LOG_LEVEL: LogLevel.DEBUG,

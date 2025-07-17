@@ -6,11 +6,9 @@ import {
   ApiParam,
   ApiBody,
   ApiConsumes,
-  ApiProduces,
   ApiHeader,
   getSchemaPath,
   ApiExtraModels,
-  ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
 import {
@@ -639,7 +637,19 @@ export const ApiFileUpload = (
   allowedTypes?: string[],
   maxSize?: number,
 ) => {
-  const schema: any = {
+  const schema: {
+    type: string;
+    properties: Record<
+      string,
+      {
+        type: string;
+        format: string;
+        description: string;
+        maxLength?: number;
+      }
+    >;
+    required: string[];
+  } = {
     type: 'object',
     properties: {
       [fieldName]: {

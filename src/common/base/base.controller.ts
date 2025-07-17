@@ -1,4 +1,4 @@
-import { Injectable, Logger, Request } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Request as ExpressRequest } from 'express';
 import { AuditLogService } from '../services/audit-log.service';
 import { SanitizationService } from '../services/sanitization.service';
@@ -61,12 +61,13 @@ export abstract class BaseController {
    * Get client IP address with proxy support
    */
   protected getClientIp(req: ExpressRequest): string {
+    const forwardedFor = req.get('X-Forwarded-For');
+    const realIp = req.get('X-Real-IP');
+
     return (
-      req.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
-      req.get('X-Real-IP') ||
+      (forwardedFor ? forwardedFor.split(',')[0]?.trim() : null) ||
+      realIp ||
       req.ip ||
-      req.connection.remoteAddress ||
-      req.socket.remoteAddress ||
       'unknown'
     );
   }
@@ -84,24 +85,29 @@ export abstract class BaseController {
   /**
    * Sanitize and validate pagination parameters
    */
-  protected sanitizePagination(query: any): { page: number; limit: number } {
-    return this.sanitization.sanitizePagination(query.page, query.limit);
+  protected sanitizePagination(query: Record<string, any>): {
+    page: number;
+    limit: number;
+  } {
+    return this.sanitization.sanitizePagination(query?.page, query?.limit);
   }
 
   /**
    * Sanitize sort parameters
    */
   protected sanitizeSort(
-    sortBy: any,
-    sortOrder: any,
+    sortBy: string,
+    sortOrder: string,
     allowedFields: string[],
   ): { sortBy: string; sortOrder: 'asc' | 'desc' } {
     const sanitizedSortBy = this.sanitization.sanitizeSortField(
       sortBy,
       allowedFields,
     );
-    const sanitizedSortOrder = ['asc', 'desc'].includes(sortOrder)
-      ? sortOrder
+    const sanitizedSortOrder: 'asc' | 'desc' = ['asc', 'desc'].includes(
+      sortOrder,
+    )
+      ? (sortOrder as 'asc' | 'desc')
       : 'desc';
 
     return {
@@ -259,10 +265,14 @@ export abstract class BaseController {
    * Rate limit check helper
    */
   protected checkRateLimit(
-    req: ExpressRequest,
-    identifier: string,
-    limit: number,
-    windowMs: number,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _req: ExpressRequest,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _identifier: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _limit: number,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _windowMs: number,
   ): boolean {
     // This would integrate with the rate limiting service
     // For now, return true (no rate limiting)

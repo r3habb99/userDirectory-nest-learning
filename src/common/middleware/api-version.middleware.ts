@@ -2,6 +2,21 @@ import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { API_CONFIG } from '../config/api.config';
 
+// Extend Express Request interface to include custom properties
+declare module 'express-serve-static-core' {
+  interface Request {
+    requestId?: string;
+    startTime?: number;
+    performanceMetrics?: {
+      requestId: string;
+      method: string;
+      url: string;
+      userAgent?: string;
+      ip?: string;
+    };
+  }
+}
+
 /**
  * API Version Middleware
  * Handles API versioning through headers and URL prefixes
@@ -19,12 +34,15 @@ export class ApiVersionMiddleware implements NestMiddleware {
     res.setHeader('X-API-Supported-Versions', 'v1');
 
     // Add CORS headers for API versioning
-    res.setHeader('Access-Control-Expose-Headers', [
-      API_CONFIG.VERSION_HEADER,
-      'X-API-Supported-Versions',
-      'X-Request-ID',
-      'X-Response-Time',
-    ].join(', '));
+    res.setHeader(
+      'Access-Control-Expose-Headers',
+      [
+        API_CONFIG.VERSION_HEADER,
+        'X-API-Supported-Versions',
+        'X-Request-ID',
+        'X-Response-Time',
+      ].join(', '),
+    );
 
     next();
   }
@@ -37,15 +55,16 @@ export class ApiVersionMiddleware implements NestMiddleware {
 @Injectable()
 export class RequestIdMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
-    const requestId = req.headers['x-request-id'] as string || 
-      `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+    const requestId =
+      (req.headers['x-request-id'] as string) ||
+      `req_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
     // Add to request for logging
-    (req as any).requestId = requestId;
-    
+    req.requestId = requestId;
+
     // Add to response headers
     res.setHeader('X-Request-ID', requestId);
-    
+
     next();
   }
 }
@@ -56,14 +75,14 @@ export class RequestIdMiddleware implements NestMiddleware {
  */
 @Injectable()
 export class ResponseTimeMiddleware implements NestMiddleware {
-  use(req: Request, res: Response, next: NextFunction) {
+  use(_req: Request, res: Response, next: NextFunction) {
     const startTime = Date.now();
-    
+
     res.on('finish', () => {
       const responseTime = Date.now() - startTime;
       res.setHeader('X-Response-Time', `${responseTime}ms`);
     });
-    
+
     next();
   }
 }

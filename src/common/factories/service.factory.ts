@@ -1,6 +1,5 @@
 import { Injectable, Type } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { BaseService } from '../base/base.service';
 
 /**
  * Service Factory
@@ -33,7 +32,7 @@ export class ServiceFactory {
   async getService<T>(serviceName: string): Promise<T> {
     // Return cached instance if exists
     if (this.serviceInstances.has(serviceName)) {
-      return this.serviceInstances.get(serviceName);
+      return this.serviceInstances.get(serviceName) as T;
     }
 
     const config = this.serviceRegistry.get(serviceName);
@@ -43,7 +42,7 @@ export class ServiceFactory {
 
     try {
       // Get service instance from NestJS DI container
-      const serviceInstance = await this.moduleRef.get(config.type, {
+      const serviceInstance = await this.moduleRef.get<T>(config.type, {
         strict: false,
       });
 
@@ -59,13 +58,13 @@ export class ServiceFactory {
   /**
    * Create service with custom dependencies
    */
-  async createServiceWithDependencies<T>(
+  createServiceWithDependencies<T>(
     serviceType: Type<T>,
-    dependencies: any[],
-  ): Promise<T> {
+    dependencies: unknown[],
+  ): T {
     try {
       // Create instance with provided dependencies
-      return new serviceType(...dependencies);
+      return new serviceType(...(dependencies as never[]));
     } catch (error) {
       throw new Error(`Failed to create service with dependencies: ${error}`);
     }
@@ -111,18 +110,18 @@ export class RepositoryFactory {
     const cacheKey = `${modelName}Repository`;
 
     if (this.repositoryInstances.has(cacheKey)) {
-      return this.repositoryInstances.get(cacheKey);
+      return this.repositoryInstances.get(cacheKey) as T;
     }
 
     try {
       // Try to get repository from DI container
-      const repositoryClass = await this.moduleRef.get(
+      const repositoryClass = await this.moduleRef.get<T>(
         `${modelName}Repository`,
         { strict: false },
       );
       this.repositoryInstances.set(cacheKey, repositoryClass);
       return repositoryClass;
-    } catch (error) {
+    } catch {
       throw new Error(`Repository for model '${modelName}' not found`);
     }
   }
@@ -130,7 +129,7 @@ export class RepositoryFactory {
   /**
    * Create generic repository for any model
    */
-  createGenericRepository<T>(modelName: string): T {
+  createGenericRepository<T>(): T {
     // This would create a generic repository instance
     // Implementation depends on your specific repository pattern
     throw new Error('Generic repository creation not implemented');
@@ -322,14 +321,23 @@ export class ResponseFactory {
   /**
    * Create error response
    */
-  createError(message: string, statusCode: number = 400, details?: any): any {
-    return {
+  createError(
+    message: string,
+    statusCode: number = 400,
+    details?: unknown,
+  ): Record<string, unknown> {
+    const result: Record<string, unknown> = {
       success: false,
       message,
       statusCode,
-      ...(details && { details }),
       timestamp: new Date().toISOString(),
     };
+
+    if (details) {
+      result.details = details;
+    }
+
+    return result;
   }
 
   /**
@@ -363,17 +371,25 @@ export class ResponseFactory {
   /**
    * Create response from template
    */
-  createFromTemplate(templateName: string, data?: any): any {
+  createFromTemplate(
+    templateName: string,
+    data?: unknown,
+  ): Record<string, unknown> {
     const template = this.templates.get(templateName);
     if (!template) {
       throw new Error(`Response template '${templateName}' not found`);
     }
 
-    return {
+    const result: Record<string, unknown> = {
       ...template,
-      ...(data && { data }),
       timestamp: new Date().toISOString(),
     };
+
+    if (data) {
+      result.data = data;
+    }
+
+    return result;
   }
 
   private initializeTemplates(): void {

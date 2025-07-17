@@ -1,5 +1,11 @@
 import { registerAs } from '@nestjs/config';
-import { IsString, IsNumber, IsBoolean, IsOptional, validateSync } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsBoolean,
+  IsOptional,
+  validateSync,
+} from 'class-validator';
 import { plainToClass, Transform } from 'class-transformer';
 
 /**
@@ -163,7 +169,8 @@ class UploadConfig {
 
   @IsString()
   @IsOptional()
-  allowedDocumentTypes?: string = 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  allowedDocumentTypes?: string =
+    'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 }
 
 class FeaturesConfig {
@@ -259,7 +266,9 @@ function validateConfig(config: Record<string, unknown>): AppConfiguration {
     },
   });
 
-  const errors = validateSync(validatedConfig, { skipMissingProperties: false });
+  const errors = validateSync(validatedConfig, {
+    skipMissingProperties: false,
+  });
 
   if (errors.length > 0) {
     throw new Error(
@@ -326,15 +335,21 @@ export const emailConfig = registerAs('email', () => ({
 export const uploadConfig = registerAs('upload', () => ({
   uploadPath: process.env.UPLOAD_PATH || './uploads',
   maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10), // 5MB
-  allowedImageTypes: process.env.ALLOWED_IMAGE_TYPES || 'image/jpeg,image/png,image/webp',
-  allowedDocumentTypes: process.env.ALLOWED_DOCUMENT_TYPES || 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  allowedImageTypes:
+    process.env.ALLOWED_IMAGE_TYPES || 'image/jpeg,image/png,image/webp',
+  allowedDocumentTypes:
+    process.env.ALLOWED_DOCUMENT_TYPES ||
+    'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 }));
 
 export const featuresConfig = registerAs('features', () => ({
   enableSwagger: process.env.ENABLE_SWAGGER !== 'false',
   enableMetrics: process.env.ENABLE_METRICS === 'true',
   enableAuditLog: process.env.ENABLE_AUDIT_LOG !== 'false',
-  maxStudentsPerCourse: parseInt(process.env.MAX_STUDENTS_PER_COURSE || '300', 10),
+  maxStudentsPerCourse: parseInt(
+    process.env.MAX_STUDENTS_PER_COURSE || '300',
+    10,
+  ),
 }));
 
 export default validateConfig;

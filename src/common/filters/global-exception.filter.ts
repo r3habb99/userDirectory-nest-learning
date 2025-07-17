@@ -8,9 +8,31 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
+import {
+  PrismaClientKnownRequestError,
+  PrismaClientValidationError,
+} from '@prisma/client/runtime/library';
 import { ApiResponse } from '../interfaces/api-response.interface';
-import { ValidationError } from 'class-validator';
+
+// Type definitions for better type safety
+interface HttpExceptionResponse {
+  message?: string | string[];
+  error?: string;
+  details?: unknown;
+}
+
+interface ValidationErrorResponse {
+  message?: string | string[];
+  error?: string;
+  statusCode?: number;
+}
+
+interface ErrorHandlerResult {
+  status: number;
+  message: string;
+  error: string;
+  details?: unknown;
+}
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -24,7 +46,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
     let error = 'INTERNAL_SERVER_ERROR';
-    let details: any = undefined;
+    let details: unknown = undefined;
 
     // Handle validation errors from class-validator
     if (exception instanceof BadRequestException) {
@@ -39,11 +61,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
       if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        const responseObj = exceptionResponse as {
-          message?: string | string[];
-          error?: string;
-          details?: any;
-        };
+        const responseObj = exceptionResponse as HttpExceptionResponse;
 
         // Handle array of validation messages
         if (Array.isArray(responseObj.message)) {
@@ -89,7 +107,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message,
       error,
       statusCode: status,
-      ...(details && { details }),
+      ...(details !== undefined &&
+      typeof details === 'object' &&
+      details !== null
+        ? { details }
+        : {}),
     };
 
     // Enhanced error logging with context
@@ -104,7 +126,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     this.logger.error(
       `${request.method} ${request.url} - ${status} - ${message}`,
       {
-        exception: exception instanceof Error ? exception.stack : String(exception),
+        exception:
+          exception instanceof Error ? exception.stack : String(exception),
         context: logContext,
         details,
       },
@@ -116,13 +139,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   /**
    * Handle validation errors from class-validator
    */
-  private handleValidationError(exception: BadRequestException): {
-    status: number;
-    message: string;
-    error: string;
-    details?: any;
-  } {
-    const response = exception.getResponse() as any;
+  private handleValidationError(
+    exception: BadRequestException,
+  ): ErrorHandlerResult {
+    const response = exception.getResponse() as ValidationErrorResponse;
 
     if (response && Array.isArray(response.message)) {
       return {
@@ -135,7 +155,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     return {
       status: HttpStatus.BAD_REQUEST,
-      message: response?.message || 'Validation failed',
+      message:
+        typeof response?.message === 'string'
+          ? response.message
+          : 'Validation failed',
       error: 'VALIDATION_ERROR',
     };
   }
@@ -143,12 +166,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   /**
    * Handle Prisma validation errors
    */
-  private handlePrismaValidationError(error: PrismaClientValidationError): {
-    status: number;
-    message: string;
-    error: string;
-    details?: any;
-  } {
+  private handlePrismaValidationError(
+    error: PrismaClientValidationError,
+  ): ErrorHandlerResult {
     return {
       status: HttpStatus.BAD_REQUEST,
       message: 'Invalid data provided to database',
@@ -159,12 +179,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     };
   }
 
-  private handlePrismaError(error: PrismaClientKnownRequestError): {
-    status: number;
-    message: string;
-    error: string;
-    details?: any;
-  } {
+  private handlePrismaError(
+    error: PrismaClientKnownRequestError,
+  ): ErrorHandlerResult {
     switch (error.code) {
       case 'P2002': {
         const target = error.meta?.target;

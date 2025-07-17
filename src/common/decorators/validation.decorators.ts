@@ -9,6 +9,30 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../services/prisma/prisma.service';
 
 /**
+ * Type-safe Prisma model accessor
+ */
+type PrismaModel = {
+  findUnique: (args: { where: Record<string, any> }) => Promise<any>;
+};
+
+function getPrismaModel(
+  prisma: PrismaService,
+  modelName: string,
+): PrismaModel | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    const model = (prisma as any)[modelName];
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    if (model && typeof model.findUnique === 'function') {
+      return model as PrismaModel;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Custom validation decorators for enhanced validation
  */
 
@@ -21,20 +45,31 @@ export class RecordExistsConstraint implements ValidatorConstraintInterface {
   async validate(value: any, args: ValidationArguments): Promise<boolean> {
     if (!value) return false;
 
-    const [model, field = 'id'] = args.constraints;
+    // Safely destructure constraints with proper typing
+    const constraints = args.constraints as [string, string?];
+    const [model, field = 'id'] = constraints;
 
     try {
-      const record = await (this.prisma as any)[model].findUnique({
+      // Type-safe access to Prisma models
+      const prismaModel = getPrismaModel(this.prisma, model);
+      if (!prismaModel) {
+        return false;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const record = await prismaModel.findUnique({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         where: { [field]: value },
       });
       return !!record;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
 
   defaultMessage(args: ValidationArguments): string {
-    const [model] = args.constraints;
+    const constraints = args.constraints as [string, string?];
+    const [model] = constraints;
     return `${model} with this ${args.property} does not exist`;
   }
 }
@@ -48,14 +83,24 @@ export class IsUniqueConstraint implements ValidatorConstraintInterface {
   async validate(value: any, args: ValidationArguments): Promise<boolean> {
     if (!value) return true; // Allow empty values, use @IsNotEmpty for required fields
 
-    const [model, field = args.property] = args.constraints;
+    // Safely destructure constraints with proper typing
+    const constraints = args.constraints as [string, string?];
+    const [model, field = args.property] = constraints;
 
     try {
-      const record = await (this.prisma as any)[model].findUnique({
+      // Type-safe access to Prisma models
+      const prismaModel = getPrismaModel(this.prisma, model);
+      if (!prismaModel) {
+        return false;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const record = await prismaModel.findUnique({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         where: { [field]: value },
       });
       return !record;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -113,13 +158,14 @@ export class ValidEnrollmentNumberConstraint
   validate(value: any): boolean {
     if (!value || typeof value !== 'string') return false;
 
-    // Format: YYYYCCC### (e.g., 2024BCA001)
+    // Format: YYYY + Course Code + ### (e.g., 2024BCA001)
+    // cspell:disable-next-line - Course codes: BCA, MCA, BBA, MBA, BCOM (Bachelor of Commerce), MCOM (Master of Commerce)
     const enrollmentRegex = /^\d{4}(BCA|MCA|BBA|MBA|BCOM|MCOM)\d{3}$/;
     return enrollmentRegex.test(value);
   }
 
   defaultMessage(): string {
-    return 'Enrollment number must follow the format YYYYCCC### (e.g., 2024BCA001)';
+    return 'Enrollment number must follow the format YYYY + Course Code + ### (e.g., 2024BCA001)';
   }
 }
 

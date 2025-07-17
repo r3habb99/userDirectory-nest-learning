@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../services/prisma/prisma.service';
-import { Prisma } from '@prisma/client';
 
 /**
  * Base Repository Class
@@ -24,8 +23,85 @@ export interface PaginatedResult<T> {
   hasPrev: boolean;
 }
 
+// Base entity interface that all entities should extend
+export interface BaseEntity {
+  id: string | number;
+  createdAt?: Date;
+  updatedAt?: Date;
+  isActive?: boolean;
+}
+
+// Type for Prisma model delegate with better typing
+type PrismaModelDelegate<T, CreateInput, UpdateInput, WhereInput> = {
+  create: (args: {
+    data: CreateInput;
+    include?: Record<string, unknown>;
+  }) => Promise<T>;
+  findUnique: (args: {
+    where: { id: string | number } | Partial<WhereInput>;
+    include?: Record<string, unknown>;
+  }) => Promise<T | null>;
+  findFirst: (args: {
+    where: WhereInput;
+    include?: Record<string, unknown>;
+  }) => Promise<T | null>;
+  findMany: (args: {
+    where?: Partial<WhereInput>;
+    skip?: number;
+    take?: number;
+    orderBy?: Record<string, 'asc' | 'desc'>;
+    include?: Record<string, unknown>;
+  }) => Promise<T[]>;
+  update: (args: {
+    where: { id: string | number };
+    data: UpdateInput;
+    include?: Record<string, unknown>;
+  }) => Promise<T>;
+  updateMany: (args: {
+    where: WhereInput;
+    data: Partial<UpdateInput>;
+  }) => Promise<{ count: number }>;
+  delete: (args: { where: { id: string | number } }) => Promise<T>;
+  deleteMany: (args: { where: WhereInput }) => Promise<{ count: number }>;
+  count: (args: { where?: Partial<WhereInput> }) => Promise<number>;
+  aggregate: (
+    args: AggregateOptions<WhereInput>,
+  ) => Promise<Record<string, unknown>>;
+  groupBy: (
+    args: GroupByOptions<WhereInput>,
+  ) => Promise<Record<string, unknown>[]>;
+};
+
+// Type for aggregate options
+type AggregateOptions<WhereInput> = {
+  where?: WhereInput;
+  _count?: Record<string, boolean>;
+  _sum?: Record<string, boolean>;
+  _avg?: Record<string, boolean>;
+  _min?: Record<string, boolean>;
+  _max?: Record<string, boolean>;
+};
+
+// Type for group by options
+type GroupByOptions<WhereInput> = {
+  by: string | string[];
+  where?: WhereInput;
+  _count?: Record<string, boolean>;
+  _sum?: Record<string, boolean>;
+  _avg?: Record<string, boolean>;
+  _min?: Record<string, boolean>;
+  _max?: Record<string, boolean>;
+  orderBy?: Record<string, 'asc' | 'desc'>;
+  having?: Record<string, unknown>;
+};
+
 @Injectable()
-export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = any> {
+export abstract class BaseRepository<
+  T extends BaseEntity,
+  CreateInput = Partial<T>,
+  UpdateInput = Partial<T>,
+  WhereInput = Partial<T>,
+> {
   protected readonly logger: Logger;
   protected abstract readonly modelName: string;
 
@@ -36,17 +112,36 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
   /**
    * Get the Prisma model delegate
    */
-  protected get model(): any {
-    return (this.prisma as any)[this.modelName];
+  protected get model(): PrismaModelDelegate<
+    T,
+    CreateInput,
+    UpdateInput,
+    WhereInput
+  > {
+    const prismaModel = (this.prisma as unknown as Record<string, unknown>)[
+      this.modelName
+    ];
+    if (!prismaModel) {
+      throw new Error(`Model ${this.modelName} not found in Prisma client`);
+    }
+    return prismaModel as PrismaModelDelegate<
+      T,
+      CreateInput,
+      UpdateInput,
+      WhereInput
+    >;
   }
 
   /**
    * Create a new record
    */
-  async create(data: CreateInput, include?: any): Promise<T> {
+  async create(
+    data: CreateInput,
+    include?: Record<string, unknown>,
+  ): Promise<T> {
     try {
       this.logger.debug(`Creating ${this.modelName} with data:`, data);
-      
+
       const result = await this.model.create({
         data,
         ...(include && { include }),
@@ -63,7 +158,10 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
   /**
    * Find record by ID
    */
-  async findById(id: string, include?: any): Promise<T | null> {
+  async findById(
+    id: string | number,
+    include?: Record<string, unknown>,
+  ): Promise<T | null> {
     try {
       const result = await this.model.findUnique({
         where: { id },
@@ -84,7 +182,10 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
   /**
    * Find record by unique field
    */
-  async findByUnique(where: any, include?: any): Promise<T | null> {
+  async findByUnique(
+    where: { id: string | number } | Partial<WhereInput>,
+    include?: Record<string, unknown>,
+  ): Promise<T | null> {
     try {
       const result = await this.model.findUnique({
         where,
@@ -93,7 +194,10 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
 
       return result;
     } catch (error) {
-      this.logger.error(`Failed to find ${this.modelName} by unique field:`, error);
+      this.logger.error(
+        `Failed to find ${this.modelName} by unique field:`,
+        error,
+      );
       throw error;
     }
   }
@@ -101,7 +205,10 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
   /**
    * Find first record matching criteria
    */
-  async findFirst(where: WhereInput, include?: any): Promise<T | null> {
+  async findFirst(
+    where: WhereInput,
+    include?: Record<string, unknown>,
+  ): Promise<T | null> {
     try {
       const result = await this.model.findFirst({
         where,
@@ -119,23 +226,24 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
    * Find many records with pagination
    */
   async findMany(
-    where: WhereInput = {},
+    where: Partial<WhereInput> | null = null,
     options: PaginationOptions,
-    include?: any,
+    include?: Record<string, unknown>,
   ): Promise<PaginatedResult<T>> {
     try {
       const { page, limit, sortBy = 'createdAt', sortOrder = 'desc' } = options;
       const skip = (page - 1) * limit;
+      const whereClause = where || {};
 
       const [data, total] = await Promise.all([
         this.model.findMany({
-          where,
+          where: whereClause,
           skip,
           take: limit,
           orderBy: { [sortBy]: sortOrder },
           ...(include && { include }),
         }),
-        this.model.count({ where }),
+        this.model.count({ where: whereClause }),
       ]);
 
       const totalPages = Math.ceil(total / limit);
@@ -158,10 +266,15 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
   /**
    * Find all records (without pagination)
    */
-  async findAll(where: WhereInput = {}, include?: any, orderBy?: any): Promise<T[]> {
+  async findAll(
+    where: Partial<WhereInput> | null = null,
+    include?: Record<string, unknown>,
+    orderBy?: Record<string, 'asc' | 'desc'>,
+  ): Promise<T[]> {
     try {
+      const whereClause = where || {};
       const result = await this.model.findMany({
-        where,
+        where: whereClause,
         ...(include && { include }),
         ...(orderBy && { orderBy }),
       });
@@ -176,7 +289,11 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
   /**
    * Update record by ID
    */
-  async update(id: string, data: UpdateInput, include?: any): Promise<T> {
+  async update(
+    id: string | number,
+    data: UpdateInput,
+    include?: Record<string, unknown>,
+  ): Promise<T> {
     try {
       this.logger.debug(`Updating ${this.modelName} ${id} with data:`, data);
 
@@ -197,7 +314,10 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
   /**
    * Update many records
    */
-  async updateMany(where: WhereInput, data: Partial<UpdateInput>): Promise<{ count: number }> {
+  async updateMany(
+    where: WhereInput,
+    data: Partial<UpdateInput>,
+  ): Promise<{ count: number }> {
     try {
       const result = await this.model.updateMany({
         where,
@@ -215,7 +335,7 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
   /**
    * Delete record by ID
    */
-  async delete(id: string): Promise<T> {
+  async delete(id: string | number): Promise<T> {
     try {
       this.logger.debug(`Deleting ${this.modelName} with ID: ${id}`);
 
@@ -234,19 +354,22 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
   /**
    * Soft delete (if model supports isActive field)
    */
-  async softDelete(id: string): Promise<T> {
+  async softDelete(id: string | number): Promise<T> {
     try {
       this.logger.debug(`Soft deleting ${this.modelName} with ID: ${id}`);
 
       const result = await this.model.update({
         where: { id },
-        data: { isActive: false },
+        data: { isActive: false } as UpdateInput,
       });
 
       this.logger.debug(`Soft deleted ${this.modelName} with ID: ${id}`);
       return result;
     } catch (error) {
-      this.logger.error(`Failed to soft delete ${this.modelName} ${id}:`, error);
+      this.logger.error(
+        `Failed to soft delete ${this.modelName} ${id}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -271,9 +394,12 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
   /**
    * Count records
    */
-  async count(where: WhereInput = {}): Promise<number> {
+  async count(where: Partial<WhereInput> | null = null): Promise<number> {
     try {
-      const count = await this.model.count({ where });
+      const whereClause = where || {};
+      const count = await this.model.count({
+        where: whereClause,
+      });
       return count;
     } catch (error) {
       this.logger.error(`Failed to count ${this.modelName}:`, error);
@@ -297,7 +423,7 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
   /**
    * Execute raw query
    */
-  async executeRaw(query: string, params: any[] = []): Promise<any> {
+  async executeRaw(query: string, params: unknown[] = []): Promise<unknown> {
     try {
       const result = await this.prisma.$queryRawUnsafe(query, ...params);
       return result;
@@ -324,14 +450,9 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
   /**
    * Aggregate data
    */
-  async aggregate(options: {
-    where?: WhereInput;
-    _count?: any;
-    _sum?: any;
-    _avg?: any;
-    _min?: any;
-    _max?: any;
-  }): Promise<any> {
+  async aggregate(
+    options: AggregateOptions<WhereInput>,
+  ): Promise<Record<string, unknown>> {
     try {
       const result = await this.model.aggregate(options);
       return result;
@@ -344,17 +465,9 @@ export abstract class BaseRepository<T, CreateInput, UpdateInput, WhereInput = a
   /**
    * Group by field
    */
-  async groupBy(options: {
-    by: string | string[];
-    where?: WhereInput;
-    _count?: any;
-    _sum?: any;
-    _avg?: any;
-    _min?: any;
-    _max?: any;
-    orderBy?: any;
-    having?: any;
-  }): Promise<any[]> {
+  async groupBy(
+    options: GroupByOptions<WhereInput>,
+  ): Promise<Record<string, unknown>[]> {
     try {
       const result = await this.model.groupBy(options);
       return result;

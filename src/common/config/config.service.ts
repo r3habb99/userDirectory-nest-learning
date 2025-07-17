@@ -1,6 +1,11 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { EnvironmentConfig, Environment, LogLevel, CacheProvider, FileStorageProvider } from './environment.config';
+import {
+  EnvironmentConfig,
+  Environment,
+  CacheProvider,
+  FileStorageProvider,
+} from './environment.config';
 
 /**
  * Enhanced Configuration Service
@@ -15,7 +20,7 @@ export class EnhancedConfigService implements OnModuleInit {
     this.config = this.configService.get<EnvironmentConfig>('environment')!;
   }
 
-  async onModuleInit() {
+  onModuleInit() {
     this.validateConfiguration();
     this.logConfigurationSummary();
   }
@@ -50,7 +55,9 @@ export class EnhancedConfigService implements OnModuleInit {
     return {
       port: this.config.PORT,
       host: this.config.HOST,
-      baseUrl: this.config.BASE_URL || `http://${this.config.HOST}:${this.config.PORT}`,
+      baseUrl:
+        this.config.BASE_URL ||
+        `http://${this.config.HOST}:${this.config.PORT}`,
       frontendUrl: this.config.FRONTEND_URL,
       environment: this.config.NODE_ENV,
     };
@@ -141,11 +148,13 @@ export class EnhancedConfigService implements OnModuleInit {
     return {
       provider: this.config.FILE_STORAGE_PROVIDER,
       local: {
-        enabled: this.config.FILE_STORAGE_PROVIDER === FileStorageProvider.LOCAL,
+        enabled:
+          this.config.FILE_STORAGE_PROVIDER === FileStorageProvider.LOCAL,
         uploadPath: this.config.UPLOAD_PATH,
       },
       s3: {
-        enabled: this.config.FILE_STORAGE_PROVIDER === FileStorageProvider.AWS_S3,
+        enabled:
+          this.config.FILE_STORAGE_PROVIDER === FileStorageProvider.AWS_S3,
         accessKeyId: this.config.AWS_ACCESS_KEY_ID,
         secretAccessKey: this.config.AWS_SECRET_ACCESS_KEY,
         region: this.config.AWS_REGION,
@@ -202,7 +211,8 @@ export class EnhancedConfigService implements OnModuleInit {
       seedData: this.config.ENABLE_SEED_DATA && !this.isProduction,
       debugRoutes: this.config.ENABLE_DEBUG_ROUTES && this.isDevelopment,
       healthChecks: this.config.ENABLE_HEALTH_CHECKS,
-      mockData: this.config.ENABLE_MOCK_DATA && (this.isDevelopment || this.isTest),
+      mockData:
+        this.config.ENABLE_MOCK_DATA && (this.isDevelopment || this.isTest),
     };
   }
 
@@ -252,8 +262,8 @@ export class EnhancedConfigService implements OnModuleInit {
     const baseConfig = {
       min: 2,
       max: this.config.DB_CONNECTION_LIMIT || 10,
-      acquireTimeoutMillis: this.config.DB_ACQUIRE_TIMEOUT || 60000,
-      idleTimeoutMillis: 30000,
+      acquireTimeoutMs: this.config.DB_ACQUIRE_TIMEOUT || 60000,
+      idleTimeoutMs: 30000,
     };
 
     switch (this.environment) {
@@ -408,14 +418,18 @@ export class EnhancedConfigService implements OnModuleInit {
    */
   private logConfigurationSummary(): void {
     this.logger.log(`Application starting in ${this.environment} mode`);
-    this.logger.log(`Server will run on ${this.server.host}:${this.server.port}`);
+    this.logger.log(
+      `Server will run on ${this.server.host}:${this.server.port}`,
+    );
     this.logger.log(`Database provider: ${this.database.provider}`);
     this.logger.log(`Cache provider: ${this.cache.provider}`);
     this.logger.log(`File storage provider: ${this.fileStorage.provider}`);
-    this.logger.log(`Features enabled: ${Object.entries(this.features)
-      .filter(([, enabled]) => enabled)
-      .map(([feature]) => feature)
-      .join(', ')}`);
+    this.logger.log(
+      `Features enabled: ${Object.entries(this.features)
+        .filter(([, enabled]) => enabled)
+        .map(([feature]) => feature)
+        .join(', ')}`,
+    );
   }
 
   /**
@@ -438,7 +452,7 @@ export class EnhancedConfigService implements OnModuleInit {
    * Check if a feature is enabled
    */
   isFeatureEnabled(featureName: keyof typeof this.features): boolean {
-    return this.features[featureName];
+    return Boolean(this.features[featureName]);
   }
 
   /**

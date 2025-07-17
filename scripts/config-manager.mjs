@@ -5,9 +5,9 @@
  * Provides commands for managing application configuration
  */
 
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 
 class ConfigManager {
   constructor() {
@@ -150,7 +150,7 @@ class ConfigManager {
   /**
    * Backup configuration
    */
-  async backupConfig(args) {
+  async backupConfig() {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupDir = `backups/config-${timestamp}`;
     
@@ -287,7 +287,7 @@ class ConfigManager {
   /**
    * Check configuration health
    */
-  async checkHealth(args) {
+  async checkHealth() {
     console.log('🏥 Checking configuration health...');
     
     const environments = ['development', 'staging', 'production', 'test'];
@@ -316,7 +316,7 @@ class ConfigManager {
     console.log(`
 🔧 Configuration Manager CLI
 
-Usage: node scripts/config-manager.js <command> [options]
+Usage: node scripts/config-manager.mjs <command> [options]
 
 Commands:
   validate [env]     Validate configuration for environment
@@ -331,10 +331,10 @@ Commands:
   help               Show this help
 
 Examples:
-  node scripts/config-manager.js validate production
-  node scripts/config-manager.js generate development --update
-  node scripts/config-manager.js compare development production
-  node scripts/config-manager.js backup
+  node scripts/config-manager.mjs validate production
+  node scripts/config-manager.mjs generate development --update
+  node scripts/config-manager.mjs compare development production
+  node scripts/config-manager.mjs backup
 `);
   }
 
@@ -431,25 +431,24 @@ Examples:
   }
 
   encrypt(text, key) {
-    const algorithm = 'aes-256-gcm';
+    const algorithm = 'aes-256-cbc';
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipher(algorithm, key);
-    
+
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
+
     return `${iv.toString('hex')}:${encrypted}`;
   }
 
   decrypt(encryptedText, key) {
-    const algorithm = 'aes-256-gcm';
-    const [ivHex, encrypted] = encryptedText.split(':');
-    const iv = Buffer.from(ivHex, 'hex');
+    const algorithm = 'aes-256-cbc';
+    const [, encrypted] = encryptedText.split(':');
     const decipher = crypto.createDecipher(algorithm, key);
-    
+
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
-    
+
     return decrypted;
   }
 
@@ -464,9 +463,9 @@ Examples:
 }
 
 // Run the CLI if called directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   const manager = new ConfigManager();
   manager.run().catch(console.error);
 }
 
-module.exports = ConfigManager;
+export default ConfigManager;

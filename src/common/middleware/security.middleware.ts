@@ -23,10 +23,11 @@ export class SecurityMiddleware implements NestMiddleware {
   }
 
   private setSecurityHeaders(res: Response): void {
-    // Prevent clickjacking
+    // Prevent click-jacking attacks
     res.setHeader('X-Frame-Options', 'DENY');
 
-    // Prevent MIME type sniffing
+    // Prevent MIME type sniffing attacks
+    // cspell:disable-next-line
     res.setHeader('X-Content-Type-Options', 'nosniff');
 
     // Enable XSS protection
@@ -61,15 +62,17 @@ export class SecurityMiddleware implements NestMiddleware {
   private sanitizeRequest(req: Request): void {
     // Basic input sanitization
     if (req.body) {
-      req.body = this.sanitizeObject(req.body);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      req.body = this.sanitizeObject(req.body) as any;
     }
 
     if (req.query) {
-      req.query = this.sanitizeObject(req.query);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      req.query = this.sanitizeObject(req.query) as any;
     }
   }
 
-  private sanitizeObject(obj: any): any {
+  private sanitizeObject(obj: unknown): unknown {
     if (typeof obj === 'string') {
       return obj
         .trim()
@@ -81,10 +84,12 @@ export class SecurityMiddleware implements NestMiddleware {
     }
 
     if (obj && typeof obj === 'object') {
-      const sanitized: any = {};
+      const sanitized: Record<string, unknown> = {};
       for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          sanitized[key] = this.sanitizeObject(obj[key]);
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          sanitized[key] = this.sanitizeObject(
+            (obj as Record<string, unknown>)[key],
+          );
         }
       }
       return sanitized;
@@ -174,7 +179,7 @@ export class AuditLogService {
     userId: string,
     action: string,
     resource: string,
-    details?: any,
+    details?: unknown,
     ip?: string,
   ): void {
     const logEntry = {
@@ -198,7 +203,7 @@ export class AuditLogService {
   logSecurityEvent(
     event: string,
     severity: 'low' | 'medium' | 'high' | 'critical',
-    details?: any,
+    details?: unknown,
     ip?: string,
   ): void {
     const logEntry = {

@@ -2,6 +2,21 @@ import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { PerformanceMonitorService } from '../services/performance-monitor.service';
 
+// Extend Express Request interface to include custom properties
+declare module 'express-serve-static-core' {
+  interface Request {
+    requestId?: string;
+    startTime?: number;
+    performanceMetrics?: {
+      requestId: string;
+      method: string;
+      url: string;
+      userAgent?: string;
+      ip?: string;
+    };
+  }
+}
+
 /**
  * Performance Monitoring Middleware
  * Tracks request performance metrics and response times
@@ -10,17 +25,15 @@ import { PerformanceMonitorService } from '../services/performance-monitor.servi
 export class PerformanceMiddleware implements NestMiddleware {
   private readonly logger = new Logger(PerformanceMiddleware.name);
 
-  constructor(
-    private readonly performanceMonitor: PerformanceMonitorService,
-  ) {}
+  constructor(private readonly performanceMonitor: PerformanceMonitorService) {}
 
   use(req: Request, res: Response, next: NextFunction) {
     const startTime = Date.now();
-    const requestId = (req as any).requestId || `req_${Date.now()}`;
+    const requestId = req.requestId || `req_${Date.now()}`;
 
     // Add performance tracking to request
-    (req as any).startTime = startTime;
-    (req as any).performanceMetrics = {
+    req.startTime = startTime;
+    req.performanceMetrics = {
       requestId,
       method: req.method,
       url: req.url,
@@ -59,6 +72,20 @@ export class PerformanceMiddleware implements NestMiddleware {
   }
 }
 
+// Define types for Prisma middleware
+interface PrismaMiddlewareParams {
+  model?: string;
+  action: string;
+  args: any;
+  dataPath: string[];
+  runInTransaction: boolean;
+}
+
+type PrismaMiddleware = (
+  params: PrismaMiddlewareParams,
+  next: (params: PrismaMiddlewareParams) => Promise<unknown>,
+) => Promise<unknown>;
+
 /**
  * Database Query Performance Middleware
  * Integrates with Prisma to track query performance
@@ -67,19 +94,17 @@ export class PerformanceMiddleware implements NestMiddleware {
 export class DatabasePerformanceMiddleware {
   private readonly logger = new Logger(DatabasePerformanceMiddleware.name);
 
-  constructor(
-    private readonly performanceMonitor: PerformanceMonitorService,
-  ) {}
+  constructor(private readonly performanceMonitor: PerformanceMonitorService) {}
 
   /**
    * Create Prisma middleware for query performance tracking
    */
-  createPrismaMiddleware() {
-    return async (params: any, next: any) => {
+  createPrismaMiddleware(): PrismaMiddleware {
+    return async (params: PrismaMiddlewareParams, next) => {
       const startTime = Date.now();
-      
+
       try {
-        const result = await next(params);
+        const result: unknown = await next(params);
         const duration = Date.now() - startTime;
 
         // Record query performance
@@ -88,14 +113,14 @@ export class DatabasePerformanceMiddleware {
         // Log slow queries
         if (duration > 1000) {
           this.logger.warn(
-            `Slow query detected: ${params.model}.${params.action} - ${duration}ms`,
+            `Slow query detected: ${params.model || 'unknown'}.${params.action} - ${duration}ms`,
           );
         }
 
         // Log query details in debug mode
         if (process.env.NODE_ENV === 'development' && duration > 100) {
           this.logger.debug(
-            `Query: ${params.model}.${params.action} - ${duration}ms`,
+            `Query: ${params.model || 'unknown'}.${params.action} - ${duration}ms`,
           );
         }
 
@@ -103,12 +128,12 @@ export class DatabasePerformanceMiddleware {
       } catch (error) {
         const duration = Date.now() - startTime;
         this.performanceMonitor.recordQuery(duration);
-        
+
         this.logger.error(
-          `Query failed: ${params.model}.${params.action} - ${duration}ms`,
+          `Query failed: ${params.model || 'unknown'}.${params.action} - ${duration}ms`,
           error,
         );
-        
+
         throw error;
       }
     };
@@ -123,50 +148,47 @@ export class DatabasePerformanceMiddleware {
 export class CachePerformanceMiddleware {
   private readonly logger = new Logger(CachePerformanceMiddleware.name);
 
-  constructor(
-    private readonly performanceMonitor: PerformanceMonitorService,
-  ) {}
+  constructor(private readonly performanceMonitor: PerformanceMonitorService) {}
 
   /**
    * Wrap cache operations with performance tracking
    */
-  wrapCacheOperation<T>(
+  async wrapCacheOperation<T>(
     operation: () => Promise<T>,
     operationType: 'get' | 'set' | 'delete',
     key: string,
   ): Promise<T> {
     const startTime = Date.now();
 
-    return operation()
-      .then((result) => {
-        const duration = Date.now() - startTime;
+    try {
+      const result = await operation();
+      const duration = Date.now() - startTime;
 
-        // Record cache metrics based on operation type
-        if (operationType === 'get') {
-          if (result !== null && result !== undefined) {
-            this.performanceMonitor.recordCacheHit();
-          } else {
-            this.performanceMonitor.recordCacheMiss();
-          }
+      // Record cache metrics based on operation type
+      if (operationType === 'get') {
+        if (result !== null && result !== undefined) {
+          this.performanceMonitor.recordCacheHit();
+        } else {
+          this.performanceMonitor.recordCacheMiss();
         }
+      }
 
-        // Log slow cache operations
-        if (duration > 100) {
-          this.logger.warn(
-            `Slow cache operation: ${operationType} ${key} - ${duration}ms`,
-          );
-        }
-
-        return result;
-      })
-      .catch((error) => {
-        const duration = Date.now() - startTime;
-        this.logger.error(
-          `Cache operation failed: ${operationType} ${key} - ${duration}ms`,
-          error,
+      // Log slow cache operations
+      if (duration > 100) {
+        this.logger.warn(
+          `Slow cache operation: ${operationType} ${key} - ${duration}ms`,
         );
-        throw error;
-      });
+      }
+
+      return result;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      this.logger.error(
+        `Cache operation failed: ${operationType} ${key} - ${duration}ms`,
+        error,
+      );
+      throw error;
+    }
   }
 }
 
@@ -179,9 +201,9 @@ export class MemoryMonitoringMiddleware implements NestMiddleware {
   private readonly logger = new Logger(MemoryMonitoringMiddleware.name);
   private lastGCTime = 0;
   private readonly gcThreshold = 500 * 1024 * 1024; // 500MB
-  private readonly gcCooldown = 60000; // 1 minute
+  private readonly gcIntervalPeriod = 60000; // 1 minute interval period
 
-  use(req: Request, res: Response, next: NextFunction) {
+  use(_req: Request, _res: Response, next: NextFunction) {
     // Check memory usage periodically
     const memUsage = process.memoryUsage();
     const heapUsedMB = memUsage.heapUsed / (1024 * 1024);
@@ -196,7 +218,7 @@ export class MemoryMonitoringMiddleware implements NestMiddleware {
     // Trigger garbage collection if memory usage is high
     if (
       memUsage.heapUsed > this.gcThreshold &&
-      Date.now() - this.lastGCTime > this.gcCooldown
+      Date.now() - this.lastGCTime > this.gcIntervalPeriod
     ) {
       this.triggerGarbageCollection();
       this.lastGCTime = Date.now();
@@ -258,35 +280,43 @@ export class RequestSizeMiddleware implements NestMiddleware {
 @Injectable()
 export class PerformanceRateLimitMiddleware implements NestMiddleware {
   private readonly logger = new Logger(PerformanceRateLimitMiddleware.name);
-  private readonly requestCounts = new Map<string, { count: number; resetTime: number }>();
+  private readonly requestCounts = new Map<
+    string,
+    { count: number; resetTime: number }
+  >();
   private readonly windowMs = 60000; // 1 minute
   private readonly maxRequests = 100;
 
   use(req: Request, res: Response, next: NextFunction) {
-    const clientId = req.ip;
+    const clientId = req.ip || 'unknown';
     const now = Date.now();
-    
+
     // Clean up expired entries
     this.cleanupExpiredEntries(now);
-    
+
     // Get or create client entry
     let clientData = this.requestCounts.get(clientId);
     if (!clientData || now > clientData.resetTime) {
       clientData = { count: 0, resetTime: now + this.windowMs };
       this.requestCounts.set(clientId, clientData);
     }
-    
+
     clientData.count++;
-    
+
     // Add rate limit headers
     res.setHeader('X-RateLimit-Limit', this.maxRequests);
-    res.setHeader('X-RateLimit-Remaining', Math.max(0, this.maxRequests - clientData.count));
+    res.setHeader(
+      'X-RateLimit-Remaining',
+      Math.max(0, this.maxRequests - clientData.count),
+    );
     res.setHeader('X-RateLimit-Reset', Math.ceil(clientData.resetTime / 1000));
-    
+
     // Check if rate limit exceeded
     if (clientData.count > this.maxRequests) {
-      this.logger.warn(`Rate limit exceeded for ${clientId}: ${clientData.count} requests`);
-      
+      this.logger.warn(
+        `Rate limit exceeded for ${clientId}: ${clientData.count} requests`,
+      );
+
       return res.status(429).json({
         success: false,
         message: 'Too many requests',
@@ -295,10 +325,10 @@ export class PerformanceRateLimitMiddleware implements NestMiddleware {
         retryAfter: Math.ceil((clientData.resetTime - now) / 1000),
       });
     }
-    
+
     next();
   }
-  
+
   private cleanupExpiredEntries(now: number) {
     for (const [clientId, data] of this.requestCounts.entries()) {
       if (now > data.resetTime) {

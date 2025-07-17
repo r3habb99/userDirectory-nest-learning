@@ -10,122 +10,170 @@ import { plainToClass, Transform } from 'class-transformer';
 class PerformanceConfig {
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value === 'true' : Boolean(value),
+  )
   enableMetrics?: boolean = false;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value === 'true' : Boolean(value),
+  )
   enableQueryOptimization?: boolean = true;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value === 'true' : Boolean(value),
+  )
   enableCaching?: boolean = true;
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   metricsInterval?: number = 60000; // 1 minute
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   slowRequestThreshold?: number = 1000; // 1 second
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   slowQueryThreshold?: number = 1000; // 1 second
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   cacheDefaultTTL?: number = 300000; // 5 minutes
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   cacheMaxSize?: number = 1000;
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   maxRequestSize?: number = 10 * 1024 * 1024; // 10MB
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   memoryThreshold?: number = 500 * 1024 * 1024; // 500MB
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
-  gcCooldown?: number = 60000; // 1 minute
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
+  gcCooldownPeriod?: number = 60000; // 1 minute
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   connectionPoolSize?: number = 10;
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   queryTimeout?: number = 30000; // 30 seconds
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   maxConcurrentQueries?: number = 50;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value === 'true' : Boolean(value),
+  )
   enableQueryLogging?: boolean = false;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value === 'true' : Boolean(value),
+  )
   enableRequestLogging?: boolean = true;
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   rateLimitWindow?: number = 60000; // 1 minute
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   rateLimitMax?: number = 100;
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value === 'true' : Boolean(value),
+  )
   enableCompression?: boolean = true;
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   compressionThreshold?: number = 1024; // 1KB
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value === 'true' : Boolean(value),
+  )
   enableEtag?: boolean = true;
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   staticFileMaxAge?: number = 86400000; // 1 day
 
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value === 'true' : Boolean(value),
+  )
   enablePrefetch?: boolean = false;
 
   @IsNumber()
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? parseInt(value, 10) : Number(value),
+  )
   prefetchBatchSize?: number = 10;
 }
 
@@ -141,7 +189,7 @@ export const performanceConfig = registerAs('performance', () => {
     cacheMaxSize: process.env.CACHE_MAX_SIZE,
     maxRequestSize: process.env.MAX_REQUEST_SIZE,
     memoryThreshold: process.env.MEMORY_THRESHOLD,
-    gcCooldown: process.env.GC_COOLDOWN,
+    gcCooldownPeriod: process.env.GC_COOLDOWN_PERIOD,
     connectionPoolSize: process.env.CONNECTION_POOL_SIZE,
     queryTimeout: process.env.QUERY_TIMEOUT,
     maxConcurrentQueries: process.env.MAX_CONCURRENT_QUERIES,
@@ -159,7 +207,12 @@ export const performanceConfig = registerAs('performance', () => {
 
   const errors = validateSync(config);
   if (errors.length > 0) {
-    throw new Error(`Performance configuration validation failed: ${errors}`);
+    const errorMessages = errors
+      .map((error) => Object.values(error.constraints || {}).join(', '))
+      .join('; ');
+    throw new Error(
+      `Performance configuration validation failed: ${errorMessages}`,
+    );
   }
 
   return config;
@@ -177,7 +230,7 @@ export const DATABASE_PERFORMANCE = {
     IDLE_TIMEOUT: 10000,
     EVICT_INTERVAL: 5000,
   },
-  
+
   // Query optimization settings
   QUERY: {
     TIMEOUT: 30000,
@@ -185,7 +238,7 @@ export const DATABASE_PERFORMANCE = {
     BATCH_SIZE: 100,
     MAX_CONCURRENT: 50,
   },
-  
+
   // Index hints for common queries
   INDEXES: {
     STUDENTS: {
@@ -218,14 +271,14 @@ export const CACHE_PERFORMANCE = {
     SEARCH_RESULTS: 2 * 60 * 1000, // 2 minutes
     SESSION_DATA: 30 * 60 * 1000, // 30 minutes
   },
-  
+
   // Cache strategies
   STRATEGIES: {
     WRITE_THROUGH: ['user_profiles', 'course_data'],
     WRITE_BEHIND: ['statistics', 'analytics'],
     CACHE_ASIDE: ['search_results', 'filtered_data'],
   },
-  
+
   // Invalidation patterns
   INVALIDATION: {
     STUDENT_UPDATED: ['students:*', 'stats:students*'],
@@ -246,14 +299,14 @@ export const UPLOAD_PERFORMANCE = {
     PROGRESSIVE: true,
     STRIP_METADATA: true,
   },
-  
+
   // File size limits
   SIZE_LIMITS: {
     PROFILE_IMAGE: 5 * 1024 * 1024, // 5MB
     DOCUMENT: 10 * 1024 * 1024, // 10MB
     GENERAL: 2 * 1024 * 1024, // 2MB
   },
-  
+
   // Processing options
   PROCESSING: {
     ENABLE_WEBP: true,
@@ -274,7 +327,7 @@ export const API_PERFORMANCE = {
     ENABLE_ETAG: true,
     CACHE_CONTROL_MAX_AGE: 300, // 5 minutes
   },
-  
+
   // Request optimization
   REQUEST: {
     MAX_SIZE: 10 * 1024 * 1024, // 10MB
@@ -282,7 +335,7 @@ export const API_PERFORMANCE = {
     KEEP_ALIVE_TIMEOUT: 5000,
     HEADERS_TIMEOUT: 60000,
   },
-  
+
   // Pagination defaults
   PAGINATION: {
     DEFAULT_LIMIT: 10,
@@ -306,14 +359,14 @@ export const MONITORING_CONFIG = {
     CPU_WARNING: 70, // 70%
     CPU_CRITICAL: 85, // 85%
   },
-  
+
   // Metrics collection
   METRICS: {
     COLLECTION_INTERVAL: 60000, // 1 minute
     RETENTION_PERIOD: 7 * 24 * 60 * 60 * 1000, // 7 days
     AGGREGATION_WINDOW: 5 * 60 * 1000, // 5 minutes
   },
-  
+
   // Health check settings
   HEALTH_CHECK: {
     INTERVAL: 30000, // 30 seconds

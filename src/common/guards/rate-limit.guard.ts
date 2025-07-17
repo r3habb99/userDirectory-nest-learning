@@ -10,6 +10,10 @@ import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 
+interface SocketWithAddress {
+  remoteAddress?: string;
+}
+
 /**
  * Rate Limiting Guard
  * Implements rate limiting to prevent abuse and DDoS attacks
@@ -53,14 +57,14 @@ export class RateLimitGuard implements CanActivate {
     setInterval(() => this.cleanup(), 5 * 60 * 1000);
   }
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
 
     // Get rate limit options from decorator or use defaults
     const options = this.getRateLimitOptions(context);
 
     // Skip rate limiting for certain conditions
-    if (this.shouldSkip(request, options)) {
+    if (this.shouldSkip(request)) {
       return true;
     }
 
@@ -118,7 +122,7 @@ export class RateLimitGuard implements CanActivate {
     return { ...this.defaultOptions, ...customOptions };
   }
 
-  private shouldSkip(request: Request, options: RateLimitOptions): boolean {
+  private shouldSkip(request: Request): boolean {
     // Skip for localhost in development
     if (
       process.env.NODE_ENV === 'development' &&
@@ -139,17 +143,17 @@ export class RateLimitGuard implements CanActivate {
     // Use IP address and user agent for more specific rate limiting
     const ip = this.getClientIp(request);
     const userAgent = request.get('User-Agent') || 'unknown';
-    const endpoint = `${request.method}:${request.route?.path || request.path}`;
+    const endpoint = `${request.method}:${request.path}`;
 
     return `${ip}:${this.hashString(userAgent)}:${endpoint}`;
   }
 
   private getClientIp(request: Request): string {
+    const socket = request.socket as SocketWithAddress;
+    const socketAddress = socket?.remoteAddress;
     return (
       request.ip ||
-      request.connection.remoteAddress ||
-      request.socket.remoteAddress ||
-      'unknown'
+      (typeof socketAddress === 'string' ? socketAddress : 'unknown')
     );
   }
 
@@ -236,13 +240,13 @@ export class RateLimitGuard implements CanActivate {
 export const RateLimit = (options: Partial<RateLimitOptions>) => {
   return (
     target: any,
-    propertyKey?: string,
+    _propertyKey?: string,
     descriptor?: PropertyDescriptor,
   ) => {
     if (descriptor) {
-      Reflect.defineMetadata('rateLimit', options, descriptor.value);
+      Reflect.defineMetadata('rateLimit', options, descriptor.value as object);
     } else {
-      Reflect.defineMetadata('rateLimit', options, target);
+      Reflect.defineMetadata('rateLimit', options, target as object);
     }
   };
 };

@@ -33,7 +33,7 @@ export const USER_ROLES = {
   STUDENT: 'STUDENT',
 } as const;
 
-export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES];
+export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
 
 // Course Types
 export const COURSE_TYPES = {
@@ -45,7 +45,7 @@ export const COURSE_TYPES = {
   MCOM: 'MCOM',
 } as const;
 
-export type CourseType = typeof COURSE_TYPES[keyof typeof COURSE_TYPES];
+export type CourseType = (typeof COURSE_TYPES)[keyof typeof COURSE_TYPES];
 
 // Course Durations (in years)
 export const COURSE_DURATIONS: Record<CourseType, number> = {
@@ -64,7 +64,7 @@ export const GENDER_OPTIONS = {
   OTHER: 'OTHER',
 } as const;
 
-export type Gender = typeof GENDER_OPTIONS[keyof typeof GENDER_OPTIONS];
+export type Gender = (typeof GENDER_OPTIONS)[keyof typeof GENDER_OPTIONS];
 
 // Attendance Status
 export const ATTENDANCE_STATUS = {
@@ -74,7 +74,8 @@ export const ATTENDANCE_STATUS = {
   EXCUSED: 'EXCUSED',
 } as const;
 
-export type AttendanceStatus = typeof ATTENDANCE_STATUS[keyof typeof ATTENDANCE_STATUS];
+export type AttendanceStatus =
+  (typeof ATTENDANCE_STATUS)[keyof typeof ATTENDANCE_STATUS];
 
 // File Upload Configuration
 export const FILE_UPLOAD_CONFIG = {
@@ -133,7 +134,8 @@ export const VALIDATION_RULES = {
 export const ERROR_MESSAGES = {
   // Authentication
   INVALID_CREDENTIALS: 'Invalid email or password',
-  ACCOUNT_LOCKED: 'Account is temporarily locked due to too many failed login attempts',
+  ACCOUNT_LOCKED:
+    'Account is temporarily locked due to too many failed login attempts',
   TOKEN_EXPIRED: 'Authentication token has expired',
   INVALID_TOKEN: 'Invalid authentication token',
   UNAUTHORIZED: 'You are not authorized to perform this action',
@@ -143,9 +145,11 @@ export const ERROR_MESSAGES = {
   REQUIRED_FIELD: 'This field is required',
   INVALID_EMAIL: 'Please provide a valid email address',
   INVALID_PHONE: 'Please provide a valid phone number',
-  INVALID_PASSWORD: 'Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character',
+  INVALID_PASSWORD:
+    'Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character',
   INVALID_AGE: 'Age must be between 16 and 60 years',
-  INVALID_ENROLLMENT_NUMBER: 'Enrollment number must follow the format YYYYCCC### (e.g., 2024BCA001)',
+  INVALID_ENROLLMENT_NUMBER:
+    'Enrollment number must follow the format YYYYCCC### (e.g., 2024BCA001)',
 
   // Resource Not Found
   STUDENT_NOT_FOUND: 'Student not found',
@@ -200,11 +204,14 @@ export const SUCCESS_MESSAGES = {
 // Cache Keys
 export const CACHE_KEYS = {
   STUDENT_BY_ID: (id: string) => `student:${id}`,
-  STUDENT_BY_ENROLLMENT: (enrollmentNumber: string) => `student:enrollment:${enrollmentNumber}`,
+  STUDENT_BY_ENROLLMENT: (enrollmentNumber: string) =>
+    `student:enrollment:${enrollmentNumber}`,
   COURSE_BY_ID: (id: string) => `course:${id}`,
   ADMIN_BY_ID: (id: string) => `admin:${id}`,
-  ATTENDANCE_BY_DATE: (studentId: string, date: string) => `attendance:${studentId}:${date}`,
-  STUDENTS_BY_COURSE: (courseId: string, page: number) => `students:course:${courseId}:page:${page}`,
+  ATTENDANCE_BY_DATE: (studentId: string, date: string) =>
+    `attendance:${studentId}:${date}`,
+  STUDENTS_BY_COURSE: (courseId: string, page: number) =>
+    `students:course:${courseId}:page:${page}`,
 } as const;
 
 // Rate Limiting
@@ -260,7 +267,7 @@ export const SECURITY_CONFIG = {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
+        imgSrc: ["'self'", 'data:', 'https:'],
       },
     },
   },
@@ -307,5 +314,6 @@ export const REGEX_PATTERNS = {
   NAME: /^[a-zA-Z\s.'-]+$/,
   ENROLLMENT_NUMBER: /^\d{4}(BCA|MCA|BBA|MBA|BCOM|MCOM)\d{3}$/,
   CUID: /^c[a-z0-9]{24}$/,
-  STRONG_PASSWORD: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+  STRONG_PASSWORD:
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
 } as const;

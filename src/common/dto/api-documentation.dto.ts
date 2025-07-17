@@ -1,6 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsString, IsNumber, IsBoolean, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsBoolean,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
 
 /**
  * API Documentation DTOs
@@ -204,7 +211,7 @@ export class StudentResponseDto {
     example: 2027,
   })
   @IsNumber()
-  passoutYear: number;
+  graduationYear: number;
 
   @ApiPropertyOptional({
     description: 'URL to student profile photo',
@@ -224,6 +231,7 @@ export class StudentResponseDto {
   @ApiProperty({
     description: 'Course information',
     type: 'object',
+    additionalProperties: true,
   })
   course: {
     id: string;
@@ -265,7 +273,7 @@ export class CourseResponseDto {
 
   @ApiProperty({
     description: 'Course type/code',
-    enum: ['BCA', 'MCA', 'BBA', 'MBA', 'BCOM', 'MCOM'],
+    enum: ['BCA', 'MCA', 'BBA', 'MBA', 'BCom', 'MCom'],
     example: 'BCA',
   })
   @IsString()
@@ -282,7 +290,8 @@ export class CourseResponseDto {
 
   @ApiPropertyOptional({
     description: 'Course description',
-    example: 'A comprehensive program covering computer applications and programming',
+    example:
+      'A comprehensive program covering computer applications and programming',
   })
   @IsOptional()
   @IsString()
@@ -359,6 +368,7 @@ export class AttendanceResponseDto {
   @ApiProperty({
     description: 'Student information',
     type: 'object',
+    additionalProperties: true,
   })
   student: {
     id: string;
@@ -369,6 +379,7 @@ export class AttendanceResponseDto {
   @ApiProperty({
     description: 'Admin who marked the attendance',
     type: 'object',
+    additionalProperties: true,
   })
   markedBy: {
     id: string;
@@ -439,6 +450,7 @@ export class IdCardResponseDto {
   @ApiProperty({
     description: 'Student information',
     type: 'object',
+    additionalProperties: true,
   })
   student: {
     id: string;
@@ -484,13 +496,14 @@ export class StatisticsResponseDto {
   @ApiProperty({
     description: 'Students by course breakdown',
     type: 'object',
+    additionalProperties: true,
     example: {
       BCA: 400,
       MCA: 200,
       BBA: 350,
       MBA: 150,
-      BCOM: 100,
-      MCOM: 50,
+      BCom: 100,
+      MCom: 50,
     },
   })
   studentsByCourse: Record<string, number>;
@@ -498,6 +511,7 @@ export class StatisticsResponseDto {
   @ApiProperty({
     description: 'Students by admission year',
     type: 'object',
+    additionalProperties: true,
     example: {
       2024: 300,
       2023: 350,
@@ -510,6 +524,7 @@ export class StatisticsResponseDto {
   @ApiProperty({
     description: 'Recent activity summary',
     type: 'object',
+    additionalProperties: true,
     example: {
       newStudentsThisMonth: 25,
       attendanceMarkedToday: 150,
@@ -528,6 +543,7 @@ export class LoginResponseDto extends BaseApiResponseDto {
   @ApiProperty({
     description: 'Login response data',
     type: 'object',
+    additionalProperties: true,
     example: {
       user: {
         id: 'clp1234567890abcdef123456',
@@ -537,7 +553,8 @@ export class LoginResponseDto extends BaseApiResponseDto {
         createdAt: '2024-01-15T10:30:00.000Z',
         lastLoginAt: '2024-01-15T10:30:00.000Z',
       },
-      accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbHAxMjM0NTY3ODkwYWJjZGVmMTIzNDU2IiwiaWF0IjoxNzA1MzE0NjAwLCJleHAiOjE3MDU0MDEwMDB9.example_signature',
+      accessToken:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbHAxMjM0NTY3ODkwYWJjZGVmMTIzNDU2IiwiaWF0IjoxNzA1MzE0NjAwLCJleHAiOjE3MDU0MDEwMDB9.example_token',
       expiresIn: '24h',
       tokenType: 'Bearer',
     },
@@ -562,6 +579,7 @@ export class FileUploadResponseDto extends BaseApiResponseDto {
   @ApiProperty({
     description: 'File upload response data',
     type: 'object',
+    additionalProperties: true,
     example: {
       filename: 'profile_image_1705314600.jpg',
       originalName: 'john_doe_photo.jpg',

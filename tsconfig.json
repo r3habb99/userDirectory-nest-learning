@@ -21,5 +21,13 @@
     "noImplicitReturns": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false
-  }
+  },
+  "include": [
+    "src/**/*",
+    "prisma/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
