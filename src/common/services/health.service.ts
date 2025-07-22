@@ -67,7 +67,10 @@ export class HealthService {
       }
 
       // Get database statistics
-      const stats = await this.prisma.getDatabaseStats();
+      const stats = (await this.prisma.getDatabaseStats()) as Record<
+        string,
+        unknown
+      >;
 
       return {
         status: responseTime < 1000 ? 'healthy' : 'degraded',
@@ -88,9 +91,8 @@ export class HealthService {
   /**
    * Check available disk space
    */
-  private async checkDiskSpace(): Promise<HealthCheck> {
+  private checkDiskSpace(): Promise<HealthCheck> {
     try {
-      const stats = fs.statSync(process.cwd());
       const freeSpace = this.getFreeDiskSpace();
       const freeSpaceGB = freeSpace / (1024 * 1024 * 1024);
 
@@ -101,26 +103,26 @@ export class HealthService {
             ? 'degraded'
             : 'unhealthy';
 
-      return {
+      return Promise.resolve({
         status,
         message: `${freeSpaceGB.toFixed(2)} GB free space available`,
         details: {
           freeSpaceGB: freeSpaceGB.toFixed(2),
           totalSpaceGB: 'N/A', // Would need additional system calls
         },
-      };
+      });
     } catch (error) {
-      return {
+      return Promise.resolve({
         status: 'unhealthy',
         message: `Disk check failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      };
+      });
     }
   }
 
   /**
    * Check memory usage
    */
-  private async checkMemoryUsage(): Promise<HealthCheck> {
+  private checkMemoryUsage(): Promise<HealthCheck> {
     try {
       const memUsage = process.memoryUsage();
       const totalMemMB = memUsage.heapTotal / (1024 * 1024);
@@ -134,7 +136,7 @@ export class HealthService {
             ? 'degraded'
             : 'unhealthy';
 
-      return {
+      return Promise.resolve({
         status,
         message: `Memory usage: ${memoryUsagePercent.toFixed(1)}%`,
         details: {
@@ -144,28 +146,28 @@ export class HealthService {
           rss: (memUsage.rss / (1024 * 1024)).toFixed(2),
           external: (memUsage.external / (1024 * 1024)).toFixed(2),
         },
-      };
+      });
     } catch (error) {
-      return {
+      return Promise.resolve({
         status: 'unhealthy',
         message: `Memory check failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      };
+      });
     }
   }
 
   /**
    * Check uploads directory accessibility
    */
-  private async checkUploadsDirectory(): Promise<HealthCheck> {
+  private checkUploadsDirectory(): Promise<HealthCheck> {
     try {
       const uploadsPath = path.join(process.cwd(), 'uploads');
 
       // Check if directory exists
       if (!fs.existsSync(uploadsPath)) {
-        return {
+        return Promise.resolve({
           status: 'unhealthy',
           message: 'Uploads directory does not exist',
-        };
+        });
       }
 
       // Check if directory is writable
@@ -175,7 +177,7 @@ export class HealthService {
       const dirSize = this.getDirectorySize(uploadsPath);
       const dirSizeMB = dirSize / (1024 * 1024);
 
-      return {
+      return Promise.resolve({
         status: 'healthy',
         message: 'Uploads directory is accessible',
         details: {
@@ -183,23 +185,23 @@ export class HealthService {
           sizeMB: dirSizeMB.toFixed(2),
           writable: true,
         },
-      };
+      });
     } catch (error) {
-      return {
+      return Promise.resolve({
         status: 'unhealthy',
         message: `Uploads directory check failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      };
+      });
     }
   }
 
   /**
    * Get basic system metrics
    */
-  async getMetrics(): Promise<SystemMetrics> {
+  getMetrics(): Promise<SystemMetrics> {
     const memUsage = process.memoryUsage();
     const uptime = process.uptime();
 
-    return {
+    return Promise.resolve({
       timestamp: new Date().toISOString(),
       uptime: {
         seconds: uptime,
@@ -217,7 +219,7 @@ export class HealthService {
         platform: process.platform,
         arch: process.arch,
       },
-    };
+    });
   }
 
   /**
@@ -251,7 +253,9 @@ export class HealthService {
     // This is a simplified implementation
     // In production, you might want to use a library like 'node-disk-info'
     try {
-      const stats = fs.statSync(process.cwd());
+      // Note: fs.statSync is used here for directory validation,
+      // but actual free space calculation would require platform-specific APIs
+      fs.statSync(process.cwd());
       return 1024 * 1024 * 1024; // Return 1GB as placeholder
     } catch {
       return 0;

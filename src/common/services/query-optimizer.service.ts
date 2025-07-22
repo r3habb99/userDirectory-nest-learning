@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../services/prisma/prisma.service';
 import { CacheService } from './cache.service';
 import { PerformanceMonitorService } from './performance-monitor.service';
+import { Prisma, CourseType } from '@prisma/client';
 
 /**
  * Query Optimization Service
@@ -42,7 +43,9 @@ export class QueryOptimizerService {
           if (enableMetrics) {
             this.performanceMonitor.recordQuery(duration);
           }
-          this.logger.debug(`Query served from cache: ${queryKey} (${duration}ms)`);
+          this.logger.debug(
+            `Query served from cache: ${queryKey} (${duration}ms)`,
+          );
           return cached;
         }
       }
@@ -76,17 +79,25 @@ export class QueryOptimizerService {
   /**
    * Optimized student queries with intelligent caching
    */
-  async findStudentsOptimized(filters: StudentQueryFilters): Promise<any> {
+  async findStudentsOptimized(
+    filters: StudentQueryFilters,
+  ): Promise<StudentQueryResult> {
     const cacheKey = this.generateStudentCacheKey(filters);
-    
+
     return this.executeOptimizedQuery(
       cacheKey,
-      async () => {
-        const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = filters;
+      async (): Promise<StudentQueryResult> => {
+        const {
+          page = 1,
+          limit = 10,
+          sortBy = 'createdAt',
+          sortOrder = 'desc',
+        } = filters;
         const skip = (page - 1) * limit;
 
         // Build optimized where clause
-        const where = this.buildOptimizedWhereClause(filters);
+        const where: Prisma.StudentWhereInput =
+          this.buildOptimizedWhereClause(filters);
 
         // Use parallel queries for better performance
         const [students, total] = await Promise.all([
@@ -94,13 +105,20 @@ export class QueryOptimizerService {
             where,
             skip,
             take: limit,
-            orderBy: { [sortBy]: sortOrder },
+            orderBy: {
+              [sortBy]: sortOrder,
+            } as Prisma.StudentOrderByWithRelationInput,
             select: this.getOptimizedStudentSelect(filters.includeRelations),
           }),
           this.prisma.student.count({ where }),
         ]);
 
-        return { students, total, page, limit };
+        return {
+          students: students as unknown as StudentWithRelations[],
+          total,
+          page,
+          limit,
+        };
       },
       {
         cacheTTL: this.calculateCacheTTL(filters),
@@ -112,12 +130,16 @@ export class QueryOptimizerService {
   /**
    * Optimized statistics queries with aggressive caching
    */
-  async getStatisticsOptimized(type: 'students' | 'courses' | 'attendance'): Promise<any> {
+  async getStatisticsOptimized(
+    type: 'students' | 'courses' | 'attendance',
+  ): Promise<StudentStatistics | CourseStatistics | AttendanceStatistics> {
     const cacheKey = CacheService.generateStatsKey(type);
-    
+
     return this.executeOptimizedQuery(
       cacheKey,
-      async () => {
+      async (): Promise<
+        StudentStatistics | CourseStatistics | AttendanceStatistics
+      > => {
         switch (type) {
           case 'students':
             return this.getStudentStatistics();
@@ -126,7 +148,7 @@ export class QueryOptimizerService {
           case 'attendance':
             return this.getAttendanceStatistics();
           default:
-            throw new Error(`Unknown statistics type: ${type}`);
+            throw new Error(`Unknown statistics type: ${type as string}`);
         }
       },
       {
@@ -164,7 +186,7 @@ export class QueryOptimizerService {
     for (let i = 0; i < queries.length; i += maxConcurrency) {
       const batch = queries.slice(i, i + maxConcurrency);
       const batchResults = await Promise.all(
-        batch.map(query =>
+        batch.map((query) =>
           this.executeOptimizedQuery(query.key, query.queryFn, query.options),
         ),
       );
@@ -177,11 +199,11 @@ export class QueryOptimizerService {
   /**
    * Invalidate related cache entries
    */
-  async invalidateRelatedCache(entity: string, id?: string): Promise<void> {
+  invalidateRelatedCache(entity: string, id?: string): void {
     const patterns = this.getCacheInvalidationPatterns(entity, id);
-    
+
     for (const pattern of patterns) {
-      await this.cache.invalidatePattern(pattern);
+      this.cache.deletePattern(pattern);
     }
 
     this.logger.debug(`Invalidated cache for entity: ${entity}, id: ${id}`);
@@ -196,21 +218,23 @@ export class QueryOptimizerService {
       filters.course || 'all',
       filters.admissionYear || 'all',
       filters.isActive !== undefined ? filters.isActive.toString() : 'all',
-      filters.search || 'nosearch',
+      filters.search || 'no-search',
       filters.page || 1,
       filters.limit || 10,
       filters.sortBy || 'createdAt',
       filters.sortOrder || 'desc',
     ];
-    
+
     return keyParts.join(':');
   }
 
   /**
    * Build optimized where clause with proper indexing hints
    */
-  private buildOptimizedWhereClause(filters: StudentQueryFilters): any {
-    const where: any = {};
+  private buildOptimizedWhereClause(
+    filters: StudentQueryFilters,
+  ): Prisma.StudentWhereInput {
+    const where: Prisma.StudentWhereInput = {};
 
     // Use indexed fields first for better performance
     if (filters.isActive !== undefined) {
@@ -218,7 +242,9 @@ export class QueryOptimizerService {
     }
 
     if (filters.course) {
-      where.course = { type: filters.course };
+      where.course = {
+        type: filters.course as CourseType,
+      };
     }
 
     if (filters.admissionYear) {
@@ -228,10 +254,10 @@ export class QueryOptimizerService {
     // Search should be last as it's most expensive
     if (filters.search) {
       where.OR = [
-        { name: { contains: filters.search, mode: 'insensitive' } },
-        { enrollmentNumber: { contains: filters.search, mode: 'insensitive' } },
-        { email: { contains: filters.search, mode: 'insensitive' } },
-        { phone: { contains: filters.search, mode: 'insensitive' } },
+        { name: { contains: filters.search } },
+        { enrollmentNumber: { contains: filters.search } },
+        { email: { contains: filters.search } },
+        { phone: { contains: filters.search } },
       ];
     }
 
@@ -241,8 +267,10 @@ export class QueryOptimizerService {
   /**
    * Get optimized select clause based on requirements
    */
-  private getOptimizedStudentSelect(includeRelations = false): any {
-    const baseSelect = {
+  private getOptimizedStudentSelect(
+    includeRelations = false,
+  ): Prisma.StudentSelect {
+    const baseSelect: Prisma.StudentSelect = {
       id: true,
       enrollmentNumber: true,
       name: true,
@@ -251,7 +279,7 @@ export class QueryOptimizerService {
       age: true,
       gender: true,
       admissionYear: true,
-      passoutYear: true,
+      passoutYear: true, // graduation year
       isActive: true,
       createdAt: true,
       updatedAt: true,
@@ -315,22 +343,23 @@ export class QueryOptimizerService {
   /**
    * Get student statistics with optimized queries
    */
-  private async getStudentStatistics(): Promise<any> {
-    const [totalStudents, activeStudents, courseStats, yearStats] = await Promise.all([
-      this.prisma.student.count(),
-      this.prisma.student.count({ where: { isActive: true } }),
-      this.prisma.student.groupBy({
-        by: ['courseId'],
-        _count: { id: true },
-        where: { isActive: true },
-      }),
-      this.prisma.student.groupBy({
-        by: ['admissionYear'],
-        _count: { id: true },
-        where: { isActive: true },
-        orderBy: { admissionYear: 'desc' },
-      }),
-    ]);
+  private async getStudentStatistics(): Promise<StudentStatistics> {
+    const [totalStudents, activeStudents, courseStats, yearStats] =
+      await Promise.all([
+        this.prisma.student.count(),
+        this.prisma.student.count({ where: { isActive: true } }),
+        this.prisma.student.groupBy({
+          by: ['courseId'],
+          _count: { id: true },
+          where: { isActive: true },
+        }),
+        this.prisma.student.groupBy({
+          by: ['admissionYear'],
+          _count: { id: true },
+          where: { isActive: true },
+          orderBy: { admissionYear: 'desc' },
+        }),
+      ]);
 
     return {
       totalStudents,
@@ -343,38 +372,61 @@ export class QueryOptimizerService {
   /**
    * Get course statistics
    */
-  private async getCourseStatistics(): Promise<any> {
-    return this.prisma.course.findMany({
-      select: {
-        id: true,
-        name: true,
-        type: true,
-        _count: {
-          select: {
-            students: { where: { isActive: true } },
-          },
-        },
-      },
-    });
+  private async getCourseStatistics(): Promise<CourseStatistics> {
+    const [totalCourses, activeCourses, courseTypes] = await Promise.all([
+      this.prisma.course.count(),
+      this.prisma.course.count({ where: { isActive: true } }),
+      this.prisma.course.groupBy({
+        by: ['type'],
+        _count: { id: true },
+        where: { isActive: true },
+      }),
+    ]);
+
+    return {
+      totalCourses,
+      activeCourses,
+      courseTypes: courseTypes.map((ct) => ({
+        type: ct.type,
+        count: ct._count.id,
+      })),
+    };
   }
 
   /**
    * Get attendance statistics
    */
-  private async getAttendanceStatistics(): Promise<any> {
+  private async getAttendanceStatistics(): Promise<AttendanceStatistics> {
     const today = new Date();
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    today.setHours(0, 0, 0, 0);
 
-    return this.prisma.attendanceRecord.groupBy({
-      by: ['status'],
-      _count: { id: true },
-      where: {
-        date: {
-          gte: startOfMonth,
-          lte: today,
+    const [totalRecords, presentToday, absentToday] = await Promise.all([
+      this.prisma.attendanceRecord.count(),
+      this.prisma.attendanceRecord.count({
+        where: {
+          date: today,
+          status: 'PRESENT',
         },
-      },
-    });
+      }),
+      this.prisma.attendanceRecord.count({
+        where: {
+          date: today,
+          status: 'ABSENT',
+        },
+      }),
+    ]);
+
+    const attendanceRate =
+      presentToday + absentToday > 0
+        ? (presentToday / (presentToday + absentToday)) * 100
+        : 0;
+
+    return {
+      totalRecords,
+      presentToday,
+      absentToday,
+      attendanceRate: Math.round(attendanceRate * 100) / 100,
+    };
   }
 
   /**
@@ -400,6 +452,71 @@ export class QueryOptimizerService {
 
     return patterns;
   }
+}
+
+// Type definitions for Prisma operations are used inline above
+
+// Student query result types
+interface StudentWithRelations {
+  id: string;
+  enrollmentNumber: string;
+  name: string;
+  email: string | null;
+  phone: string;
+  age: number;
+  gender: string;
+  admissionYear: number;
+  passoutYear: number; // graduation year
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  course?: {
+    id: string;
+    name: string;
+    type: string;
+    duration: number;
+  };
+  admin?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+interface StudentQueryResult {
+  students: StudentWithRelations[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+interface StudentStatistics {
+  totalStudents: number;
+  activeStudents: number;
+  courseStats: Array<{
+    courseId: string;
+    _count: { id: number };
+  }>;
+  yearStats: Array<{
+    admissionYear: number;
+    _count: { id: number };
+  }>;
+}
+
+interface CourseStatistics {
+  totalCourses: number;
+  activeCourses: number;
+  courseTypes: Array<{
+    type: string;
+    count: number;
+  }>;
+}
+
+interface AttendanceStatistics {
+  totalRecords: number;
+  presentToday: number;
+  absentToday: number;
+  attendanceRate: number;
 }
 
 // Interfaces

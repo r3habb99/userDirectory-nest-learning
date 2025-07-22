@@ -71,14 +71,14 @@ async function bootstrap() {
     );
 
   // Add additional servers from config
-  DOCS_CONFIG.SERVERS.forEach(server => {
+  DOCS_CONFIG.SERVERS.forEach((server) => {
     if (server.url !== `http://localhost:${port}/api/v1`) {
       config.addServer(server.url, server.description);
     }
   });
 
   // Add tags with descriptions
-  DOCS_CONFIG.TAGS.forEach(tag => {
+  DOCS_CONFIG.TAGS.forEach((tag) => {
     config.addTag(tag.name, tag.description);
   });
 

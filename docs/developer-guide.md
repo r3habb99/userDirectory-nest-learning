@@ -91,11 +91,7 @@ src/
 │   ├── prisma/            # Database service
 │   ├── student/           # Student services
 │   └── upload/            # Upload services
-├── test/                  # Test files
-│   ├── e2e/               # End-to-end tests
-│   ├── integration/       # Integration tests
-│   ├── performance/       # Performance tests
-│   └── security/          # Security tests
+
 ├── app.module.ts          # Root module
 └── main.ts                # Application entry point
 ```
@@ -155,21 +151,25 @@ CACHE_TTL=300
 ### Database Setup
 
 1. **Create Database**:
+
    ```sql
    CREATE DATABASE college_directory;
    ```
 
 2. **Generate Prisma Client**:
+
    ```bash
    npx prisma generate
    ```
 
 3. **Push Schema**:
+
    ```bash
    npx prisma db push
    ```
 
 4. **Seed Data** (optional):
+
    ```bash
    npm run seed
    ```
@@ -272,70 +272,6 @@ const MAX_FILE_SIZE = 1024 * 1024;
 
 // Files: kebab-case
 student.service.ts
-student.controller.spec.ts
-```
-
-## 🧪 Testing Guidelines
-
-### Test Structure
-
-```typescript
-describe('StudentService', () => {
-  let service: StudentService;
-  let prisma: MockPrismaService;
-
-  beforeEach(async () => {
-    // Setup test module
-  });
-
-  describe('create', () => {
-    it('should create a student successfully', async () => {
-      // Arrange
-      const studentDto = { /* test data */ };
-      
-      // Act
-      const result = await service.create(studentDto);
-      
-      // Assert
-      expect(result.success).toBe(true);
-    });
-
-    it('should throw error for invalid data', async () => {
-      // Test error cases
-    });
-  });
-});
-```
-
-### Test Data Management
-
-```typescript
-// Use factories for test data
-const student = MockDataFactory.createStudent();
-const course = MockDataFactory.createCourse();
-
-// Clean up after tests
-afterEach(async () => {
-  await dbHelper.cleanDatabase();
-});
-```
-
-### Mocking Guidelines
-
-```typescript
-// Mock external dependencies
-const mockPrismaService = {
-  student: {
-    create: jest.fn(),
-    findMany: jest.fn(),
-  },
-};
-
-// Use dependency injection for mocks
-providers: [
-  StudentService,
-  { provide: PrismaService, useValue: mockPrismaService },
-]
 ```
 
 ## 🔍 Debugging

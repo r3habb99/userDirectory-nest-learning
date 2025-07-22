@@ -1,6 +1,10 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Environment } from '../config/environment.config';
+import {
+  Environment,
+  CacheProvider,
+  FileStorageProvider,
+  LogLevel,
+} from '../config/environment.config';
 import { EnhancedConfigService } from '../config/config.service';
 
 /**
@@ -11,20 +15,17 @@ import { EnhancedConfigService } from '../config/config.service';
 export class ConfigValidationService implements OnModuleInit {
   private readonly logger = new Logger(ConfigValidationService.name);
 
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly enhancedConfig: EnhancedConfigService,
-  ) {}
+  constructor(private readonly enhancedConfig: EnhancedConfigService) {}
 
-  async onModuleInit() {
-    await this.validateConfiguration();
+  onModuleInit() {
+    this.validateConfiguration();
     this.logValidationResults();
   }
 
   /**
    * Comprehensive configuration validation
    */
-  async validateConfiguration(): Promise<ValidationResult> {
+  validateConfiguration(): ValidationResult {
     const results: ValidationResult = {
       isValid: true,
       errors: [],
@@ -44,7 +45,9 @@ export class ConfigValidationService implements OnModuleInit {
     results.isValid = results.errors.length === 0;
 
     if (!results.isValid) {
-      throw new Error(`Configuration validation failed: ${results.errors.join(', ')}`);
+      throw new Error(
+        `Configuration validation failed: ${results.errors.join(', ')}`,
+      );
     }
 
     return results;
@@ -86,7 +89,7 @@ export class ConfigValidationService implements OnModuleInit {
     // Validate database URL format
     try {
       const url = new URL(dbConfig.url);
-      
+
       if (!['mysql:', 'postgresql:'].includes(url.protocol)) {
         results.errors.push('Unsupported database protocol');
       }
@@ -98,24 +101,30 @@ export class ConfigValidationService implements OnModuleInit {
       if (!url.pathname || url.pathname === '/') {
         results.errors.push('Database name is required');
       }
-    } catch (error) {
+    } catch {
       results.errors.push('Invalid DATABASE_URL format');
     }
 
     // Production-specific database validations
     if (this.enhancedConfig.isProduction) {
       if (!dbConfig.ssl && !dbConfig.url.includes('ssl=true')) {
-        results.warnings.push('SSL is not enabled for database connection in production');
+        results.warnings.push(
+          'SSL is not enabled for database connection in production',
+        );
       }
 
       if (dbConfig.connectionLimit && dbConfig.connectionLimit < 10) {
-        results.warnings.push('Database connection limit is low for production');
+        results.warnings.push(
+          'Database connection limit is low for production',
+        );
       }
     }
 
     // Connection pool validation
     if (dbConfig.connectionLimit && dbConfig.connectionLimit > 50) {
-      results.warnings.push('Database connection limit is very high, consider reducing');
+      results.warnings.push(
+        'Database connection limit is very high, consider reducing',
+      );
     }
   }
 
@@ -134,40 +143,53 @@ export class ConfigValidationService implements OnModuleInit {
         results.errors.push('JWT_SECRET must be at least 32 characters long');
       }
 
-      if (authConfig.jwt.secret === 'your-secret-key' || 
-          authConfig.jwt.secret.includes('change') ||
-          authConfig.jwt.secret.includes('default')) {
+      if (
+        authConfig.jwt.secret === 'your-secret-key' ||
+        authConfig.jwt.secret.includes('change') ||
+        authConfig.jwt.secret.includes('default')
+      ) {
         results.errors.push('JWT_SECRET must be changed from default value');
       }
     }
 
     // CORS validation
-    if (this.enhancedConfig.isProduction) {
+    if (this.enhancedConfig.isProduction && securityConfig.cors.origins) {
       if (securityConfig.cors.origins.includes('*')) {
-        results.errors.push('CORS origins must be explicitly set in production (no wildcards)');
+        results.errors.push(
+          'CORS origins must be explicitly set in production (no wildcards)',
+        );
       }
 
-      const hasInsecureOrigins = securityConfig.cors.origins.some(origin => 
-        origin.startsWith('http://') && !origin.includes('localhost')
+      const hasInsecureOrigins = securityConfig.cors.origins.some(
+        (origin) =>
+          origin.startsWith('http://') && !origin.includes('localhost'),
       );
-      
+
       if (hasInsecureOrigins) {
-        results.warnings.push('HTTP origins detected in production, consider using HTTPS');
+        results.warnings.push(
+          'HTTP origins detected in production, consider using HTTPS',
+        );
       }
     }
 
     // Rate limiting validation
-    if (securityConfig.rateLimit.max > 1000) {
-      results.warnings.push('Rate limit is very high, consider reducing for better security');
+    if (securityConfig.rateLimit.max && securityConfig.rateLimit.max > 1000) {
+      results.warnings.push(
+        'Rate limit is very high, consider reducing for better security',
+      );
     }
 
     // bcrypt rounds validation
-    if (authConfig.bcrypt.rounds < 10) {
-      results.warnings.push('bcrypt rounds is low, consider increasing for better security');
+    if (authConfig.bcrypt.rounds && authConfig.bcrypt.rounds < 10) {
+      results.warnings.push(
+        'bcrypt rounds is low, consider increasing for better security',
+      );
     }
 
-    if (authConfig.bcrypt.rounds > 15) {
-      results.warnings.push('bcrypt rounds is very high, may impact performance');
+    if (authConfig.bcrypt.rounds && authConfig.bcrypt.rounds > 15) {
+      results.warnings.push(
+        'bcrypt rounds is very high, may impact performance',
+      );
     }
   }
 
@@ -180,24 +202,42 @@ export class ConfigValidationService implements OnModuleInit {
     const emailConfig = this.enhancedConfig.email;
 
     // Cache validation
-    if (cacheConfig.provider === 'redis' && !cacheConfig.redis.url) {
-      results.errors.push('REDIS_URL is required when using Redis cache provider');
+    if (
+      cacheConfig.provider === CacheProvider.REDIS &&
+      !cacheConfig.redis?.url
+    ) {
+      results.errors.push(
+        'REDIS_URL is required when using Redis cache provider',
+      );
     }
 
     // File storage validation
-    if (fileConfig.provider === 's3') {
+    if (fileConfig.provider === FileStorageProvider.AWS_S3) {
       const s3Config = fileConfig.s3;
-      const requiredS3Fields = ['accessKeyId', 'secretAccessKey', 'region', 'bucket'];
-      const missingS3Fields = requiredS3Fields.filter(field => !s3Config[field]);
-      
+      const requiredS3Fields = [
+        'accessKeyId',
+        'secretAccessKey',
+        'region',
+        'bucket',
+      ];
+      const missingS3Fields = requiredS3Fields.filter(
+        (field) => !s3Config[field],
+      );
+
       if (missingS3Fields.length > 0) {
-        results.errors.push(`Missing S3 configuration: ${missingS3Fields.join(', ')}`);
+        results.errors.push(
+          `Missing S3 configuration: ${missingS3Fields.join(', ')}`,
+        );
       }
     }
 
     // Email validation
     if (emailConfig.enabled) {
-      if (!emailConfig.host || !emailConfig.auth.user || !emailConfig.auth.pass) {
+      if (
+        !emailConfig.host ||
+        !emailConfig.auth?.user ||
+        !emailConfig.auth?.pass
+      ) {
         results.warnings.push('Email configuration is incomplete');
       }
 
@@ -217,17 +257,20 @@ export class ConfigValidationService implements OnModuleInit {
     const cacheConfig = this.enhancedConfig.cache;
 
     // File upload size validation
-    const maxSize = fileConfig.upload.maxFileSize;
-    if (maxSize > 50 * 1024 * 1024) { // 50MB
+    const maxSize = fileConfig.upload?.maxFileSize;
+    if (maxSize && maxSize > 50 * 1024 * 1024) {
+      // 50MB
       results.warnings.push('Maximum file upload size is very large');
     }
 
     // Cache TTL validation
-    if (cacheConfig.ttl > 3600) { // 1 hour
+    if (cacheConfig.ttl && cacheConfig.ttl > 3600) {
+      // 1 hour
       results.warnings.push('Cache TTL is very long, consider reducing');
     }
 
-    if (cacheConfig.ttl < 60) { // 1 minute
+    if (cacheConfig.ttl && cacheConfig.ttl < 60) {
+      // 1 minute
       results.warnings.push('Cache TTL is very short, may impact performance');
     }
   }
@@ -260,13 +303,17 @@ export class ConfigValidationService implements OnModuleInit {
     }
 
     if (server.frontendUrl && server.frontendUrl.startsWith('http://')) {
-      results.warnings.push('Frontend URL uses HTTP in production, consider HTTPS');
+      results.warnings.push(
+        'Frontend URL uses HTTP in production, consider HTTPS',
+      );
     }
 
     // Security headers validation
     const securityConfig = this.enhancedConfig.security;
-    if (!securityConfig.helmet.enabled) {
-      results.warnings.push('Security headers (Helmet) are disabled in production');
+    if (securityConfig.helmet && !securityConfig.helmet.enabled) {
+      results.warnings.push(
+        'Security headers (Helmet) are disabled in production',
+      );
     }
   }
 
@@ -281,7 +328,9 @@ export class ConfigValidationService implements OnModuleInit {
     }
 
     if (!features.debugRoutes) {
-      results.recommendations.push('Consider enabling debug routes in development');
+      results.recommendations.push(
+        'Consider enabling debug routes in development',
+      );
     }
   }
 
@@ -293,12 +342,17 @@ export class ConfigValidationService implements OnModuleInit {
     const logging = this.enhancedConfig.logging;
 
     // Monitoring validation
-    if (!monitoring.sentry.enabled && !monitoring.newRelic.enabled) {
-      results.recommendations.push('Consider enabling error monitoring (Sentry/New Relic) in production');
+    if (!monitoring.sentry?.enabled && !monitoring.newRelic?.enabled) {
+      results.recommendations.push(
+        'Consider enabling error monitoring (Sentry/New Relic) in production',
+      );
     }
 
     // Logging validation
-    if (logging.level === 'debug' || logging.level === 'verbose') {
+    if (
+      logging.level === LogLevel.DEBUG ||
+      logging.level === LogLevel.VERBOSE
+    ) {
       results.warnings.push('Log level is very verbose for production');
     }
 
@@ -314,15 +368,18 @@ export class ConfigValidationService implements OnModuleInit {
     try {
       // Test database connection
       // This would be implemented with actual database connection test
-      
+      await Promise.resolve(); // Placeholder for actual async operations
+
       // Test cache connection if Redis
-      if (this.enhancedConfig.cache.provider === 'redis') {
+      if (this.enhancedConfig.cache.provider === CacheProvider.REDIS) {
         // Test Redis connection
+        await Promise.resolve(); // Placeholder for Redis connection test
       }
 
       // Test email service if configured
       if (this.enhancedConfig.email.enabled) {
         // Test email service connection
+        await Promise.resolve(); // Placeholder for email service test
       }
 
       return true;
@@ -337,7 +394,7 @@ export class ConfigValidationService implements OnModuleInit {
    */
   getConfigurationHealth(): ConfigurationHealth {
     const validation = this.validateConfiguration();
-    
+
     return {
       status: validation.isValid ? 'healthy' : 'unhealthy',
       environment: this.enhancedConfig.environment,
@@ -356,7 +413,9 @@ export class ConfigValidationService implements OnModuleInit {
     this.logger.log(`Environment: ${this.enhancedConfig.environment}`);
     this.logger.log(`Database: ${this.enhancedConfig.database.provider}`);
     this.logger.log(`Cache: ${this.enhancedConfig.cache.provider}`);
-    this.logger.log(`File Storage: ${this.enhancedConfig.fileStorage.provider}`);
+    this.logger.log(
+      `File Storage: ${this.enhancedConfig.fileStorage.provider}`,
+    );
   }
 }
 

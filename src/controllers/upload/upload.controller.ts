@@ -21,7 +21,7 @@ import {
   ApiConsumes,
   ApiBody,
   ApiParam,
-  ApiQuery,
+  // ApiQuery,
 } from '@nestjs/swagger';
 import { FileUploadService } from '../../services/upload/file-upload.service';
 import { UploadConfigService } from '../../common/config/upload.config';
@@ -277,8 +277,11 @@ export class UploadController {
     @Param('category') category: UploadCategory,
     @Param('filename') filename: string,
   ): Promise<ApiResponse> {
-    const fileInfo = await this.fileUploadService.getFileInfo(category, filename);
-    
+    const fileInfo = await this.fileUploadService.getFileInfo(
+      category,
+      filename,
+    );
+
     if (!fileInfo) {
       throw new NotFoundException('File not found');
     }
@@ -315,7 +318,7 @@ export class UploadController {
     @Param('filename') filename: string,
   ): Promise<ApiResponse> {
     const deleted = await this.fileUploadService.deleteFile(category, filename);
-    
+
     if (!deleted) {
       throw new NotFoundException('File not found');
     }
@@ -333,8 +336,8 @@ export class UploadController {
     status: 200,
     description: 'Disk usage statistics retrieved successfully',
   })
-  async getDiskUsage(): Promise<ApiResponse> {
-    const usage = await this.uploadConfigService.getDiskUsage();
+  getDiskUsage(): ApiResponse {
+    const usage = this.uploadConfigService.getDiskUsage();
 
     return {
       success: true,

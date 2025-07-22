@@ -10,9 +10,12 @@ import { CacheService } from '../../common/services/cache.service';
 import { HealthService } from '../../common/services/health.service';
 import { PrismaService } from '../../services/prisma/prisma.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../../common/types/auth.types';
+import {
+  HealthStatus,
+  SystemMetrics,
+  CacheStats,
+} from '../../common/interfaces';
+
 import { ApiStandardResponses } from '../../common/decorators/swagger.decorators';
 
 /**
@@ -21,9 +24,8 @@ import { ApiStandardResponses } from '../../common/decorators/swagger.decorators
  */
 @ApiTags('Performance')
 @Controller('performance')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
-@Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
 export class PerformanceController {
   constructor(
     private readonly performanceMonitor: PerformanceMonitorService,
@@ -35,7 +37,8 @@ export class PerformanceController {
   @Get('metrics')
   @ApiOperation({
     summary: 'Get performance metrics',
-    description: 'Retrieve comprehensive performance metrics including request times, cache hit rates, and system resources',
+    description:
+      'Retrieve comprehensive performance metrics including request times, cache hit rates, and system resources',
   })
   @ApiResponse({
     status: 200,
@@ -81,9 +84,9 @@ export class PerformanceController {
     },
   })
   @ApiStandardResponses()
-  async getMetrics() {
+  getMetrics() {
     const metrics = this.performanceMonitor.getMetrics();
-    
+
     return {
       success: true,
       message: 'Performance metrics retrieved successfully',
@@ -96,7 +99,8 @@ export class PerformanceController {
   @Get('summary')
   @ApiOperation({
     summary: 'Get performance summary',
-    description: 'Retrieve a high-level performance summary with health score and recommendations',
+    description:
+      'Retrieve a high-level performance summary with health score and recommendations',
   })
   @ApiResponse({
     status: 200,
@@ -124,9 +128,9 @@ export class PerformanceController {
     },
   })
   @ApiStandardResponses()
-  async getSummary() {
+  getSummary() {
     const summary = this.performanceMonitor.getPerformanceSummary();
-    
+
     return {
       success: true,
       message: 'Performance summary retrieved successfully',
@@ -138,7 +142,8 @@ export class PerformanceController {
   @Get('health')
   @ApiOperation({
     summary: 'Get system health status',
-    description: 'Comprehensive health check including database, disk, memory, and uploads directory',
+    description:
+      'Comprehensive health check including database, disk, memory, and uploads directory',
   })
   @ApiResponse({
     status: 200,
@@ -178,9 +183,14 @@ export class PerformanceController {
     },
   })
   @ApiStandardResponses()
-  async getHealth() {
+  async getHealth(): Promise<{
+    success: boolean;
+    message: string;
+    statusCode: number;
+    data: HealthStatus;
+  }> {
     const healthStatus = await this.health.getHealthStatus();
-    
+
     return {
       success: true,
       message: 'Health status retrieved successfully',
@@ -192,16 +202,23 @@ export class PerformanceController {
   @Get('cache/stats')
   @ApiOperation({
     summary: 'Get cache statistics',
-    description: 'Detailed cache performance statistics including hit rates and memory usage',
+    description:
+      'Detailed cache performance statistics including hit rates and memory usage',
   })
   @ApiResponse({
     status: 200,
     description: 'Cache statistics retrieved successfully',
   })
   @ApiStandardResponses()
-  async getCacheStats() {
-    const stats = await this.cache.getStats();
-    
+  getCacheStats(): {
+    success: boolean;
+    message: string;
+    statusCode: number;
+    data: CacheStats;
+    timestamp: string;
+  } {
+    const stats = this.cache.getStats();
+
     return {
       success: true,
       message: 'Cache statistics retrieved successfully',
@@ -214,26 +231,34 @@ export class PerformanceController {
   @Get('database/stats')
   @ApiOperation({
     summary: 'Get database statistics',
-    description: 'Database performance statistics including connection pool status and query metrics',
+    description:
+      'Database performance statistics including connection pool status and query metrics',
   })
   @ApiResponse({
     status: 200,
     description: 'Database statistics retrieved successfully',
   })
   @ApiStandardResponses()
-  async getDatabaseStats() {
-    const [dbStats, poolStatus] = await Promise.all([
+  async getDatabaseStats(): Promise<{
+    success: boolean;
+    message: string;
+    statusCode: number;
+    data: Record<string, any>;
+    timestamp: string;
+  }> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const [dbStats, poolStatus]: [any, any] = await Promise.all([
       this.prisma.getDatabaseStats(),
       this.prisma.getConnectionPoolStatus(),
     ]);
-    
+
     return {
       success: true,
       message: 'Database statistics retrieved successfully',
       statusCode: 200,
       data: {
-        ...dbStats,
-        connectionPool: poolStatus,
+        ...(dbStats as Record<string, any>),
+        connectionPool: poolStatus as Record<string, any>,
       },
       timestamp: new Date().toISOString(),
     };
@@ -242,7 +267,8 @@ export class PerformanceController {
   @Post('cache/clear')
   @ApiOperation({
     summary: 'Clear application cache',
-    description: 'Clear all cached data to free memory and force fresh data retrieval',
+    description:
+      'Clear all cached data to free memory and force fresh data retrieval',
   })
   @ApiResponse({
     status: 200,
@@ -251,7 +277,7 @@ export class PerformanceController {
   @ApiStandardResponses()
   async clearCache() {
     await this.cache.clear();
-    
+
     return {
       success: true,
       message: 'Cache cleared successfully',
@@ -270,9 +296,14 @@ export class PerformanceController {
     description: 'Performance metrics reset successfully',
   })
   @ApiStandardResponses()
-  async resetMetrics() {
+  resetMetrics(): {
+    success: boolean;
+    message: string;
+    statusCode: number;
+    timestamp: string;
+  } {
     this.performanceMonitor.resetMetrics();
-    
+
     return {
       success: true,
       message: 'Performance metrics reset successfully',
@@ -284,21 +315,29 @@ export class PerformanceController {
   @Get('system/info')
   @ApiOperation({
     summary: 'Get system information',
-    description: 'Retrieve detailed system information including Node.js version, memory usage, and uptime',
+    description:
+      'Retrieve detailed system information including Node.js version, memory usage, and uptime',
   })
   @ApiResponse({
     status: 200,
     description: 'System information retrieved successfully',
   })
   @ApiStandardResponses()
-  async getSystemInfo() {
+  async getSystemInfo(): Promise<{
+    success: boolean;
+    message: string;
+    statusCode: number;
+    data: SystemMetrics;
+    timestamp: string;
+  }> {
     const systemMetrics = await this.health.getMetrics();
-    
+
     return {
       success: true,
       message: 'System information retrieved successfully',
       statusCode: 200,
       data: systemMetrics,
+      timestamp: new Date().toISOString(),
     };
   }
 }

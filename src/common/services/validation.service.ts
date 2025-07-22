@@ -190,7 +190,11 @@ export class ValidationService {
   /**
    * Enhanced password strength validation with scoring
    */
-  validatePassword(password: string): { isValid: boolean; errors: string[]; score: number } {
+  validatePassword(password: string): {
+    isValid: boolean;
+    errors: string[];
+    score: number;
+  } {
     const errors: string[] = [];
     let score = 0;
 
@@ -249,8 +253,16 @@ export class ValidationService {
 
     // Check for common weak passwords
     const commonPasswords = [
-      'password', '123456', 'qwerty', 'admin', 'letmein', 'welcome',
-      'monkey', '1234567890', 'password123', 'admin123'
+      'password',
+      '123456',
+      'qwerty',
+      'admin',
+      'letmein',
+      'welcome',
+      'monkey',
+      '1234567890',
+      'password123',
+      'admin123',
     ];
     if (commonPasswords.includes(password.toLowerCase())) {
       errors.push('Password is too common and easily guessable');
@@ -276,14 +288,16 @@ export class ValidationService {
       '0123456789',
       'qwertyuiop',
       'asdfghjkl',
-      'zxcvbnm'
+      'zxcvbnm',
     ];
 
     for (const seq of sequences) {
       for (let i = 0; i <= seq.length - 3; i++) {
         const subseq = seq.substring(i, i + 3);
-        if (password.toLowerCase().includes(subseq) ||
-            password.toLowerCase().includes(subseq.split('').reverse().join(''))) {
+        if (
+          password.toLowerCase().includes(subseq) ||
+          password.toLowerCase().includes(subseq.split('').reverse().join(''))
+        ) {
           return true;
         }
       }
@@ -294,12 +308,22 @@ export class ValidationService {
 
   private containsDictionaryWord(password: string): boolean {
     const commonWords = [
-      'password', 'admin', 'user', 'login', 'welcome', 'hello',
-      'world', 'computer', 'internet', 'email', 'phone', 'name'
+      'password',
+      'admin',
+      'user',
+      'login',
+      'welcome',
+      'hello',
+      'world',
+      'computer',
+      'internet',
+      'email',
+      'phone',
+      'name',
     ];
 
     const lowerPassword = password.toLowerCase();
-    return commonWords.some(word => lowerPassword.includes(word));
+    return commonWords.some((word) => lowerPassword.includes(word));
   }
 
   /**
@@ -392,7 +416,8 @@ export class ValidationService {
       MCOM: 2,
     };
 
-    const expectedPassoutYear = data.admissionYear + courseDurations[data.courseType];
+    const expectedPassoutYear =
+      data.admissionYear + courseDurations[data.courseType];
     if (data.passoutYear !== expectedPassoutYear) {
       errors.push(
         `Passout year should be ${expectedPassoutYear} for ${data.courseType} course starting in ${data.admissionYear}`,
@@ -401,7 +426,9 @@ export class ValidationService {
 
     // Age validation for course type
     if (data.courseType.startsWith('M') && data.age < 20) {
-      errors.push('Students must be at least 20 years old for Master\'s programs');
+      errors.push(
+        "Students must be at least 20 years old for Master's programs",
+      );
     }
 
     return {
@@ -413,11 +440,27 @@ export class ValidationService {
   /**
    * Validate file security
    */
-  validateFileSecurity(file: Express.Multer.File): { isValid: boolean; error?: string } {
+  validateFileSecurity(file: Express.Multer.File): {
+    isValid: boolean;
+    error?: string;
+  } {
     // Check for potentially dangerous file extensions
     const dangerousExtensions = [
-      '.exe', '.bat', '.cmd', '.com', '.pif', '.scr', '.vbs', '.js',
-      '.jar', '.php', '.asp', '.aspx', '.jsp', '.sh', '.ps1'
+      '.exe',
+      '.bat',
+      '.cmd',
+      '.com',
+      '.pif',
+      '.scr',
+      '.vbs',
+      '.js',
+      '.jar',
+      '.php',
+      '.asp',
+      '.aspx',
+      '.jsp',
+      '.sh',
+      '.ps1',
     ];
 
     const fileExtension = file.originalname.toLowerCase().split('.').pop();
@@ -446,8 +489,6 @@ export class ValidationService {
 
     return { isValid: true };
   }
-
-
 
   /**
    * Validate ID format (CUID)

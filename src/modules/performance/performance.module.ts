@@ -20,16 +20,14 @@ import {
  */
 @Global()
 @Module({
-  imports: [
-    ConfigModule.forFeature(performanceConfig),
-  ],
+  imports: [ConfigModule.forFeature(performanceConfig)],
   providers: [
     // Core performance services
     CacheService,
     PerformanceMonitorService,
     QueryOptimizerService,
     HealthService,
-    
+
     // Performance middleware
     PerformanceMiddleware,
     DatabasePerformanceMiddleware,

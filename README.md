@@ -298,15 +298,10 @@ npm run lint:fix          # Fix ESLint issues
 npm run format            # Format with Prettier
 npm run format:check      # Check formatting
 
-# Testing
-npm run test              # Run all tests
-npm run test:unit         # Unit tests only
-npm run test:integration  # Integration tests
-npm run test:e2e          # End-to-end tests
-npm run test:performance  # Performance tests
-npm run test:security     # Security tests
-npm run test:coverage     # Generate coverage report
-npm run test:watch        # Watch mode
+# Development
+npm run start:dev         # Start in development mode
+npm run start:debug       # Start in debug mode
+npm run lint              # Run ESLint
 ```
 
 ## 📚 API Documentation
@@ -337,42 +332,6 @@ The API includes comprehensive interactive documentation powered by Swagger:
 | `/api/v1/courses` | GET | List courses | ✅ |
 | `/api/v1/attendance` | POST | Mark attendance | ✅ |
 | `/api/v1/upload/profile` | POST | Upload file | ✅ |
-
-## 🧪 Testing
-
-### Test Types
-
-- **Unit Tests**: Individual component testing
-- **Integration Tests**: Component interaction testing
-- **E2E Tests**: Complete workflow testing
-- **Performance Tests**: Load and response time testing
-- **Security Tests**: Security vulnerability testing
-
-### Running Tests
-
-```bash
-# All tests
-npm run test:all
-
-# Specific test types
-npm run test:unit
-npm run test:integration
-npm run test:e2e
-npm run test:performance
-npm run test:security
-
-# Coverage report
-npm run test:coverage
-```
-
-### Test Coverage
-
-Current coverage targets:
-
-- **Lines**: 80%+
-- **Functions**: 80%+
-- **Branches**: 80%+
-- **Statements**: 80%+
 
 ## 🚀 Deployment
 

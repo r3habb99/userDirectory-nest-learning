@@ -47,7 +47,8 @@ export class CreateCourseDto {
 
   @ApiPropertyOptional({
     description: 'Detailed description of the course',
-    example: 'A comprehensive 3-year undergraduate program in computer applications',
+    example:
+      'A comprehensive 3-year undergraduate program in computer applications',
     maxLength: 1000,
   })
   @IsOptional()

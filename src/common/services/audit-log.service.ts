@@ -87,7 +87,6 @@ export class AuditLogService {
       if (entry.severity === AuditSeverity.CRITICAL) {
         await this.logCriticalEvent(auditEntry);
       }
-
     } catch (error) {
       this.logger.error('Failed to log audit event', error);
     }
@@ -272,14 +271,23 @@ export class AuditLogService {
     return JSON.stringify(logs, null, 2);
   }
 
-  private determineSeverity(action: AuditAction, resource: string): AuditSeverity {
+  private determineSeverity(
+    action: AuditAction,
+    resource: string,
+  ): AuditSeverity {
     // Critical operations
-    if (action === AuditAction.DELETE && ['student', 'admin', 'course'].includes(resource)) {
+    if (
+      action === AuditAction.DELETE &&
+      ['student', 'admin', 'course'].includes(resource)
+    ) {
       return AuditSeverity.HIGH;
     }
 
     // Sensitive data access
-    if (action === AuditAction.READ && ['student', 'admin'].includes(resource)) {
+    if (
+      action === AuditAction.READ &&
+      ['student', 'admin'].includes(resource)
+    ) {
       return AuditSeverity.LOW;
     }
 
@@ -293,8 +301,11 @@ export class AuditLogService {
 
   private logToFile(entry: AuditLogEntry): void {
     const logMessage = `[AUDIT] ${entry.timestamp.toISOString()} | ${entry.action} | ${entry.resource} | User: ${entry.userEmail || 'anonymous'} | IP: ${entry.ipAddress || 'unknown'} | Success: ${entry.success}`;
-    
-    if (entry.severity === AuditSeverity.CRITICAL || entry.severity === AuditSeverity.HIGH) {
+
+    if (
+      entry.severity === AuditSeverity.CRITICAL ||
+      entry.severity === AuditSeverity.HIGH
+    ) {
       this.logger.error(logMessage);
     } else if (entry.severity === AuditSeverity.MEDIUM) {
       this.logger.warn(logMessage);
@@ -332,11 +343,15 @@ export class AuditLogService {
 
     const csvRows = [
       headers.join(','),
-      ...logs.map(log => 
-        headers.map(header => {
-          const value = (log as any)[header];
-          return typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value || '';
-        }).join(',')
+      ...logs.map((log) =>
+        headers
+          .map((header) => {
+            const value = (log as any)[header];
+            return typeof value === 'string'
+              ? `"${value.replace(/"/g, '""')}"`
+              : value || '';
+          })
+          .join(','),
       ),
     ];
 

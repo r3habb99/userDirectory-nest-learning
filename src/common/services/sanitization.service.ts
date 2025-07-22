@@ -36,7 +36,7 @@ export class SanitizationService {
       // Remove tags not in allowed list
       const allowedTagsRegex = new RegExp(
         `<(?!\/?(?:${allowedTags.join('|')})\s*\/?>)[^>]+>`,
-        'gi'
+        'gi',
       );
       sanitized = sanitized.replace(allowedTagsRegex, '');
     }
@@ -84,12 +84,14 @@ export class SanitizationService {
     if (!url || typeof url !== 'string') return '';
 
     const trimmed = url.trim();
-    
+
     // Check if it's a valid URL
-    if (!validator.isURL(trimmed, { 
-      protocols: ['http', 'https'],
-      require_protocol: true 
-    })) {
+    if (
+      !validator.isURL(trimmed, {
+        protocols: ['http', 'https'],
+        require_protocol: true,
+      })
+    ) {
       return '';
     }
 
@@ -138,15 +140,10 @@ export class SanitizationService {
   /**
    * Sanitize array input
    */
-  sanitizeArray<T>(
-    input: any,
-    sanitizer: (item: any) => T | null
-  ): T[] {
+  sanitizeArray<T>(input: any, sanitizer: (item: any) => T | null): T[] {
     if (!Array.isArray(input)) return [];
 
-    return input
-      .map(sanitizer)
-      .filter((item): item is T => item !== null);
+    return input.map(sanitizer).filter((item): item is T => item !== null);
   }
 
   /**
@@ -154,7 +151,7 @@ export class SanitizationService {
    */
   sanitizeObject<T extends Record<string, any>>(
     input: any,
-    sanitizers: Partial<Record<keyof T, (value: any) => any>>
+    sanitizers: Partial<Record<keyof T, (value: any) => any>>,
   ): Partial<T> {
     if (!input || typeof input !== 'object') return {};
 
@@ -180,7 +177,10 @@ export class SanitizationService {
 
     return input
       .replace(/['";\\]/g, '') // Remove quotes and backslashes
-      .replace(/\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b/gi, '') // Remove SQL keywords
+      .replace(
+        /\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b/gi,
+        '',
+      ) // Remove SQL keywords
       .trim();
   }
 
@@ -205,15 +205,23 @@ export class SanitizationService {
     if (!field || typeof field !== 'string') return allowedFields[0] || 'id';
 
     const sanitized = field.replace(/[^a-zA-Z0-9_]/g, '');
-    return allowedFields.includes(sanitized) ? sanitized : allowedFields[0] || 'id';
+    return allowedFields.includes(sanitized)
+      ? sanitized
+      : allowedFields[0] || 'id';
   }
 
   /**
    * Sanitize pagination parameters
    */
   sanitizePagination(page: any, limit: any): { page: number; limit: number } {
-    const sanitizedPage = Math.max(1, Math.floor(this.sanitizeNumber(page) || 1));
-    const sanitizedLimit = Math.min(100, Math.max(1, Math.floor(this.sanitizeNumber(limit) || 10)));
+    const sanitizedPage = Math.max(
+      1,
+      Math.floor(this.sanitizeNumber(page) || 1),
+    );
+    const sanitizedLimit = Math.min(
+      100,
+      Math.max(1, Math.floor(this.sanitizeNumber(limit) || 10)),
+    );
 
     return { page: sanitizedPage, limit: sanitizedLimit };
   }
@@ -233,7 +241,7 @@ export class SanitizationService {
     }
 
     if (Array.isArray(obj)) {
-      return obj.map(item => this.deepSanitize(item));
+      return obj.map((item) => this.deepSanitize(item));
     }
 
     if (typeof obj === 'object') {
@@ -257,7 +265,7 @@ export class SanitizationService {
     // CUID format validation and sanitization
     const sanitized = id.replace(/[^a-z0-9]/g, '');
     const cuidRegex = /^c[a-z0-9]{24}$/;
-    
+
     return cuidRegex.test(sanitized) ? sanitized : '';
   }
 
@@ -266,7 +274,7 @@ export class SanitizationService {
    */
   sanitizeEnum<T extends string>(
     value: any,
-    allowedValues: readonly T[]
+    allowedValues: readonly T[],
   ): T | null {
     if (!value || typeof value !== 'string') return null;
 

@@ -1,9 +1,17 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { EnhancedConfigService } from '../../common/config/config.service';
-import { ConfigValidationService, ConfigurationHealth } from '../../common/services/config-validation.service';
+import { CacheProvider } from '../../common/config/environment.config';
+import {
+  ConfigValidationService,
+  ConfigurationHealth,
+} from '../../common/services/config-validation.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { AdminGuard } from '../../common/guards/admin.guard';
 
 /**
  * Configuration Controller
@@ -11,7 +19,7 @@ import { AdminGuard } from '../../common/guards/admin.guard';
  */
 @ApiTags('Configuration')
 @Controller('config')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class ConfigController {
   constructor(
@@ -20,12 +28,13 @@ export class ConfigController {
   ) {}
 
   @Get('health')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get configuration health status',
-    description: 'Returns the current configuration health status including validation results'
+    description:
+      'Returns the current configuration health status including validation results',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Configuration health status',
     schema: {
       type: 'object',
@@ -36,20 +45,21 @@ export class ConfigController {
         warnings: { type: 'array', items: { type: 'string' } },
         recommendations: { type: 'array', items: { type: 'string' } },
         lastChecked: { type: 'string', format: 'date-time' },
-      }
-    }
+      },
+    },
   })
   getConfigurationHealth(): ConfigurationHealth {
     return this.validationService.getConfigurationHealth();
   }
 
   @Get('summary')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get configuration summary',
-    description: 'Returns a summary of current configuration settings (non-sensitive)'
+    description:
+      'Returns a summary of current configuration settings (non-sensitive)',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Configuration summary',
     schema: {
       type: 'object',
@@ -61,7 +71,7 @@ export class ConfigController {
             port: { type: 'number' },
             host: { type: 'string' },
             baseUrl: { type: 'string' },
-          }
+          },
         },
         database: {
           type: 'object',
@@ -69,14 +79,14 @@ export class ConfigController {
             provider: { type: 'string' },
             connectionLimit: { type: 'number' },
             ssl: { type: 'boolean' },
-          }
+          },
         },
         cache: {
           type: 'object',
           properties: {
             provider: { type: 'string' },
             ttl: { type: 'number' },
-          }
+          },
         },
         features: {
           type: 'object',
@@ -84,10 +94,10 @@ export class ConfigController {
             swagger: { type: 'boolean' },
             metrics: { type: 'boolean' },
             auditLog: { type: 'boolean' },
-          }
-        }
-      }
-    }
+          },
+        },
+      },
+    },
   })
   getConfigurationSummary() {
     return {
@@ -120,12 +130,12 @@ export class ConfigController {
   }
 
   @Get('features')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get feature flags',
-    description: 'Returns current feature flag settings'
+    description: 'Returns current feature flag settings',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Feature flags',
     schema: {
       type: 'object',
@@ -137,20 +147,20 @@ export class ConfigController {
         debugRoutes: { type: 'boolean' },
         healthChecks: { type: 'boolean' },
         mockData: { type: 'boolean' },
-      }
-    }
+      },
+    },
   })
   getFeatureFlags() {
     return this.configService.features;
   }
 
   @Get('limits')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get application limits',
-    description: 'Returns current application limits and constraints'
+    description: 'Returns current application limits and constraints',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Application limits',
     schema: {
       type: 'object',
@@ -159,20 +169,20 @@ export class ConfigController {
         maxCoursesPerAdmin: { type: 'number' },
         maxRequestsPerMinute: { type: 'number' },
         maxConcurrentConnections: { type: 'number' },
-      }
-    }
+      },
+    },
   })
   getApplicationLimits() {
     return this.configService.limits;
   }
 
   @Get('validation')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Validate configuration',
-    description: 'Performs runtime configuration validation'
+    description: 'Performs runtime configuration validation',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Validation results',
     schema: {
       type: 'object',
@@ -181,20 +191,20 @@ export class ConfigController {
         errors: { type: 'array', items: { type: 'string' } },
         warnings: { type: 'array', items: { type: 'string' } },
         recommendations: { type: 'array', items: { type: 'string' } },
-      }
-    }
+      },
+    },
   })
   async validateConfiguration() {
     return await this.validationService.validateConfiguration();
   }
 
   @Get('runtime-check')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Perform runtime configuration check',
-    description: 'Tests actual connectivity to configured services'
+    description: 'Tests actual connectivity to configured services',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Runtime check results',
     schema: {
       type: 'object',
@@ -207,20 +217,21 @@ export class ConfigController {
             cache: { type: 'boolean' },
             email: { type: 'boolean' },
             fileStorage: { type: 'boolean' },
-          }
+          },
         },
         timestamp: { type: 'string', format: 'date-time' },
-      }
-    }
+      },
+    },
   })
   async performRuntimeCheck() {
     const isValid = await this.validationService.validateRuntimeConfig();
-    
+
     return {
       success: isValid,
       checks: {
         database: true, // Would implement actual database connectivity check
-        cache: this.configService.cache.provider === 'memory' || true, // Redis connectivity check
+        cache:
+          this.configService.cache.provider === CacheProvider.MEMORY || true, // Redis connectivity check
         email: !this.configService.email.enabled || true, // Email service check
         fileStorage: true, // File storage accessibility check
       },

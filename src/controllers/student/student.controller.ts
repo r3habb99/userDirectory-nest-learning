@@ -16,7 +16,7 @@ import {
   ApiOperation,
   ApiResponse as SwaggerResponse,
   ApiBearerAuth,
-  ApiQuery,
+  // ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
 import {
@@ -64,7 +64,13 @@ export class StudentController {
     description: 'Students retrieved successfully',
   })
   @ApiPaginationQuery()
-  @ApiSortingQuery(['name', 'enrollmentNumber', 'course', 'admissionYear', 'createdAt'])
+  @ApiSortingQuery([
+    'name',
+    'enrollmentNumber',
+    'course',
+    'admissionYear',
+    'createdAt',
+  ])
   @ApiStandardResponses()
   async findAll(
     @Query(ValidationPipe) filters: StudentFiltersDto,

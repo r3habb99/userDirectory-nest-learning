@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EnrollmentService } from '../enrollment/enrollment.service';
 import { CreateStudentDto } from '../../dto/student/create-student.dto';
@@ -11,14 +11,25 @@ import {
 } from '../../common/exceptions/custom.exceptions';
 import { ResponseUtils } from '../../common/utils/response.utils';
 import { EnrollmentUtils } from '../../common/utils/enrollment.utils';
-import { ValidationService } from '../../common/services/validation.service';
-import { AuditLogService } from '../../common/middleware/security.middleware';
 import { QueryOptimizerService } from '../../common/services/query-optimizer.service';
-import { CacheService } from '../../common/services/cache.service';
 import {
   ApiResponse,
   PaginatedResponse,
 } from '../../common/interfaces/api-response.interface';
+
+// Import the statistics interfaces
+interface StudentStatistics {
+  totalStudents: number;
+  activeStudents: number;
+  courseStats: Array<{
+    courseId: string;
+    _count: { id: number };
+  }>;
+  yearStats: Array<{
+    admissionYear: number;
+    _count: { id: number };
+  }>;
+}
 
 @Injectable()
 export class StudentService {
@@ -27,10 +38,7 @@ export class StudentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly enrollmentService: EnrollmentService,
-    private readonly validationService: ValidationService,
-    private readonly auditLogService: AuditLogService,
     private readonly queryOptimizer: QueryOptimizerService,
-    private readonly cache: CacheService,
   ) {}
 
   /**
@@ -50,7 +58,7 @@ export class StudentService {
         throw new CourseNotFoundException(createStudentDto.courseId);
       }
 
-      // Validate years
+      // Validate years (passoutYear = graduation year)
       const yearValidation = EnrollmentUtils.validateYears(
         createStudentDto.admissionYear,
         createStudentDto.passoutYear,
@@ -278,7 +286,7 @@ export class StudentService {
         }
       }
 
-      // Validate years if updating them
+      // Validate years if updating them (passoutYear = graduation year)
       if (updateStudentDto.admissionYear || updateStudentDto.passoutYear) {
         const admissionYear =
           updateStudentDto.admissionYear || existingStudent.admissionYear;
@@ -372,6 +380,11 @@ export class StudentService {
       const stats =
         await this.queryOptimizer.getStatisticsOptimized('students');
 
+      // Type guard to ensure we have student statistics
+      if (!this.isStudentStatistics(stats)) {
+        throw new Error('Invalid statistics type returned');
+      }
+
       // Get course details for course stats
       const courseDetails = await this.prisma.course.findMany({
         where: {
@@ -416,6 +429,23 @@ export class StudentService {
       );
       throw error;
     }
+  }
+
+  /**
+   * Type guard to check if statistics are student statistics
+   */
+  private isStudentStatistics(stats: unknown): stats is StudentStatistics {
+    if (!stats || typeof stats !== 'object') {
+      return false;
+    }
+
+    const obj = stats as Record<string, unknown>;
+    return (
+      typeof obj.totalStudents === 'number' &&
+      typeof obj.activeStudents === 'number' &&
+      Array.isArray(obj.courseStats) &&
+      Array.isArray(obj.yearStats)
+    );
   }
 
   /**

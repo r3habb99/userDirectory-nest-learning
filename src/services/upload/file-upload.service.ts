@@ -14,7 +14,6 @@ import {
 } from '../../common/interfaces/upload.interface';
 import { UploadConfigService } from '../../common/config/upload.config';
 import { CacheService } from '../../common/services/cache.service';
-import { PerformanceMonitorService } from '../../common/services/performance-monitor.service';
 
 /**
  * Enhanced File upload service with performance optimizations
@@ -27,7 +26,6 @@ export class FileUploadService {
   constructor(
     private readonly uploadConfig: UploadConfigService,
     private readonly cache: CacheService,
-    private readonly performanceMonitor: PerformanceMonitorService,
   ) {}
 
   /**
@@ -236,7 +234,11 @@ export class FileUploadService {
       const fileTypeResult = await fileTypeFromBuffer(file.buffer);
       const isImage = fileTypeResult?.mime.startsWith('image/');
 
-      if (isImage && (config?.autoResize || config?.quality) && fileTypeResult) {
+      if (
+        isImage &&
+        (config?.autoResize || config?.quality) &&
+        fileTypeResult
+      ) {
         await this.processImageOptimized(file, filePath, config);
       } else {
         // Save file directly for non-images or when no processing needed
@@ -244,64 +246,13 @@ export class FileUploadService {
       }
 
       const duration = Date.now() - startTime;
-      this.logger.debug(`File processed and saved: ${path.basename(filePath)} (${duration}ms)`);
+      this.logger.debug(
+        `File processed and saved: ${path.basename(filePath)} (${duration}ms)`,
+      );
     } catch (error) {
       const duration = Date.now() - startTime;
       this.logger.error(`File processing failed: (${duration}ms)`, error);
       throw error;
-    }
-  }
-
-  /**
-   * Legacy method - kept for backward compatibility
-   */
-  private async processAndSaveFile(
-    file: Express.Multer.File,
-    filePath: string,
-    config?: Partial<UploadConfig>,
-  ): Promise<void> {
-    // Ensure directory exists
-    const directory = path.dirname(filePath);
-    if (!fs.existsSync(directory)) {
-      fs.mkdirSync(directory, { recursive: true });
-    }
-
-    // Check if it's an image that needs processing
-    const fileTypeResult = await fileTypeFromBuffer(file.buffer);
-    const isImage = fileTypeResult?.mime.startsWith('image/');
-
-    if (isImage && (config?.autoResize || config?.quality) && fileTypeResult) {
-      // Process image with Sharp
-      let sharpInstance = sharp(file.buffer);
-
-      // Resize if needed
-      if (config?.autoResize && (config?.maxWidth || config?.maxHeight)) {
-        sharpInstance = sharpInstance.resize(
-          config.maxWidth,
-          config.maxHeight,
-          {
-            fit: 'inside',
-            withoutEnlargement: true,
-          },
-        );
-      }
-
-      // Set quality if specified
-      if (config?.quality) {
-        if (fileTypeResult.mime === 'image/jpeg') {
-          sharpInstance = sharpInstance.jpeg({ quality: config.quality });
-        } else if (fileTypeResult.mime === 'image/png') {
-          sharpInstance = sharpInstance.png({ quality: config.quality });
-        } else if (fileTypeResult.mime === 'image/webp') {
-          sharpInstance = sharpInstance.webp({ quality: config.quality });
-        }
-      }
-
-      // Save processed image
-      await sharpInstance.toFile(filePath);
-    } else {
-      // Save file as-is
-      fs.writeFileSync(filePath, file.buffer);
     }
   }
 
@@ -450,19 +401,13 @@ export class FileUploadService {
         });
       }
 
-      // Apply WebP conversion if enabled
-      if (config?.convertToWebP) {
-        const webpPath = filePath.replace(/\.(jpg|jpeg|png)$/i, '.webp');
-        await sharpInstance.webp({ quality: config.quality || 80 }).toFile(webpPath);
-
-        // Also save original format
-        await sharpInstance.toFile(filePath);
-      } else {
-        await sharpInstance.toFile(filePath);
-      }
+      // Save the processed image
+      await sharpInstance.toFile(filePath);
 
       const duration = Date.now() - startTime;
-      this.logger.debug(`Image processed: ${path.basename(filePath)} (${duration}ms)`);
+      this.logger.debug(
+        `Image processed: ${path.basename(filePath)} (${duration}ms)`,
+      );
     } catch (error) {
       const duration = Date.now() - startTime;
       this.logger.error(`Image processing failed: (${duration}ms)`, error);

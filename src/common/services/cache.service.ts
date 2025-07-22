@@ -26,7 +26,10 @@ export class CacheService implements OnModuleInit {
 
   constructor(private readonly configService: ConfigService) {
     this.maxCacheSize = this.configService.get<number>('CACHE_MAX', 1000);
-    this.enableMetrics = this.configService.get<boolean>('ENABLE_METRICS', false);
+    this.enableMetrics = this.configService.get<boolean>(
+      'ENABLE_METRICS',
+      false,
+    );
   }
 
   async onModuleInit() {
@@ -34,7 +37,9 @@ export class CacheService implements OnModuleInit {
     this.startCleanupInterval();
 
     // Log cache configuration
-    this.logger.log(`Cache initialized with max size: ${this.maxCacheSize}, TTL: ${this.defaultTTL}ms`);
+    this.logger.log(
+      `Cache initialized with max size: ${this.maxCacheSize}, TTL: ${this.defaultTTL}ms`,
+    );
   }
 
   /**
@@ -304,7 +309,9 @@ export class CacheService implements OnModuleInit {
    */
   private logMetrics(operation: string, key: string): void {
     if (this.enableMetrics) {
-      this.logger.debug(`Cache ${operation}: ${key} | Hit rate: ${this.getHitRate().toFixed(2)}%`);
+      this.logger.debug(
+        `Cache ${operation}: ${key} | Hit rate: ${this.getHitRate().toFixed(2)}%`,
+      );
     }
   }
 

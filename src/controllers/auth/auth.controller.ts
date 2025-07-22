@@ -22,7 +22,11 @@ import { ChangePasswordDto } from '../../dto/auth/change-password.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { ApiResponse, AuthenticatedRequest } from '../../common/interfaces';
-import { LoginResponseDto, ApiResponseDto, ErrorResponseDto } from '../../dto/common/api-response.dto';
+import {
+  LoginResponseDto,
+  ApiResponseDto,
+  ErrorResponseDto,
+} from '../../dto/common/api-response.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')

@@ -125,11 +125,7 @@ export class ErrorResponseUtils {
   /**
    * Create a forbidden error
    */
-  static forbidden(
-    resource: string,
-    action: string,
-    reason?: string,
-  ): never {
+  static forbidden(resource: string, action: string, reason?: string): never {
     throw new HttpException(
       {
         success: false,
@@ -200,10 +196,7 @@ export class ErrorResponseUtils {
   /**
    * Create a database error
    */
-  static databaseError(
-    operation: string,
-    details?: any,
-  ): never {
+  static databaseError(operation: string, details?: any): never {
     throw new HttpException(
       {
         success: false,
@@ -248,10 +241,7 @@ export class ErrorResponseUtils {
   /**
    * Create a timeout error
    */
-  static timeout(
-    operation: string,
-    timeoutMs: number,
-  ): never {
+  static timeout(operation: string, timeoutMs: number): never {
     throw new HttpException(
       {
         success: false,
@@ -271,9 +261,7 @@ export class ErrorResponseUtils {
   /**
    * Create a maintenance mode error
    */
-  static maintenanceMode(
-    estimatedDuration?: string,
-  ): never {
+  static maintenanceMode(estimatedDuration?: string): never {
     throw new HttpException(
       {
         success: false,
